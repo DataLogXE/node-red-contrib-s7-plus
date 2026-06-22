@@ -1,0 +1,5583 @@
+[
+    {
+        "id": "write_single_tab",
+        "type": "tab",
+        "label": "Write Single Values",
+        "disabled": false,
+        "info": "Write tests for all scalar datatypes in plc/s7-1500.\nFor every datatype there is one s7-plus write node plus one inject per\nconstant defined in the matching DB; each inject writes that constant\nvalue into the *_write symbol.\nBelow each write group a read-back row (trigger inject + s7-plus read +\ndebug) reads the same *_write tag back from the PLC for verification.\nHardware and system datatypes are intentionally excluded.",
+        "env": []
+    },
+    {
+        "id": "flow_hdr",
+        "type": "comment",
+        "z": "write_single_tab",
+        "name": "Write single values — every plc/s7-1500 scalar constant",
+        "info": "",
+        "x": 280,
+        "y": 60,
+        "wires": []
+    },
+    {
+        "id": "sec_binary",
+        "type": "comment",
+        "z": "write_single_tab",
+        "name": "Binary",
+        "info": "DB_Binary",
+        "x": 130,
+        "y": 140,
+        "wires": []
+    },
+    {
+        "id": "wr_binary_bool_write",
+        "type": "s7-plus write",
+        "z": "write_single_tab",
+        "name": "Bool_write",
+        "endpoint": "example_plc_ep",
+        "symbols": [
+            {
+                "name": "DB_Binary.Bool_write",
+                "address": "DB_Binary.Bool_write",
+                "datatype": "Bool"
+            }
+        ],
+        "outputFormat": "object",
+        "x": 590,
+        "y": 180,
+        "wires": [
+            [
+                "db_binary_bool_write"
+            ]
+        ]
+    },
+    {
+        "id": "db_binary_bool_write",
+        "type": "debug",
+        "z": "write_single_tab",
+        "name": "Bool result",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "false",
+        "statusVal": "payload[\"DB_Binary.Bool_write\"].value",
+        "statusType": "msg",
+        "x": 930,
+        "y": 180,
+        "wires": []
+    },
+    {
+        "id": "inj_binary_bool_false",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "Bool_False",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "false",
+        "payloadType": "bool",
+        "x": 140,
+        "y": 180,
+        "wires": [
+            [
+                "wr_binary_bool_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_binary_bool_true",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "Bool_True",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "true",
+        "payloadType": "bool",
+        "x": 140,
+        "y": 220,
+        "wires": [
+            [
+                "wr_binary_bool_write"
+            ]
+        ]
+    },
+    {
+        "id": "trg_binary_bool_write",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "Read Bool_write",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 160,
+        "y": 300,
+        "wires": [
+            [
+                "rd_binary_bool_write"
+            ]
+        ]
+    },
+    {
+        "id": "rd_binary_bool_write",
+        "type": "s7-plus read",
+        "z": "write_single_tab",
+        "name": "Bool_write",
+        "endpoint": "example_plc_ep",
+        "symbols": [
+            {
+                "name": "DB_Binary.Bool_write",
+                "address": "DB_Binary.Bool_write",
+                "datatype": "Bool"
+            }
+        ],
+        "outputFormat": "object",
+        "x": 590,
+        "y": 300,
+        "wires": [
+            [
+                "dbr_binary_bool_write"
+            ]
+        ]
+    },
+    {
+        "id": "dbr_binary_bool_write",
+        "type": "debug",
+        "z": "write_single_tab",
+        "name": "Bool read",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "false",
+        "statusVal": "payload[\"DB_Binary.Bool_write\"].value",
+        "statusType": "msg",
+        "x": 920,
+        "y": 300,
+        "wires": []
+    },
+    {
+        "id": "sec_bitstrings",
+        "type": "comment",
+        "z": "write_single_tab",
+        "name": "BitStrings",
+        "info": "DB_BitStrings",
+        "x": 140,
+        "y": 420,
+        "wires": []
+    },
+    {
+        "id": "wr_bitstrings_byte_write",
+        "type": "s7-plus write",
+        "z": "write_single_tab",
+        "name": "Byte_write",
+        "endpoint": "example_plc_ep",
+        "symbols": [
+            {
+                "name": "DB_BitStrings.Byte_write",
+                "address": "DB_BitStrings.Byte_write",
+                "datatype": "Byte"
+            }
+        ],
+        "outputFormat": "object",
+        "x": 590,
+        "y": 460,
+        "wires": [
+            [
+                "db_bitstrings_byte_write"
+            ]
+        ]
+    },
+    {
+        "id": "db_bitstrings_byte_write",
+        "type": "debug",
+        "z": "write_single_tab",
+        "name": "Byte result",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "false",
+        "statusVal": "payload[\"DB_BitStrings.Byte_write\"].value",
+        "statusType": "msg",
+        "x": 930,
+        "y": 460,
+        "wires": []
+    },
+    {
+        "id": "inj_bitstrings_byte_min_0x00",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "Byte_Min_0x00",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "0",
+        "payloadType": "num",
+        "x": 160,
+        "y": 460,
+        "wires": [
+            [
+                "wr_bitstrings_byte_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_bitstrings_byte_max_0xff",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "Byte_Max_0xFF",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "0x00FF",
+        "payloadType": "num",
+        "x": 160,
+        "y": 500,
+        "wires": [
+            [
+                "wr_bitstrings_byte_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_bitstrings_byte_0xab",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "Byte_0xAB",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "0x00AB",
+        "payloadType": "num",
+        "x": 140,
+        "y": 540,
+        "wires": [
+            [
+                "wr_bitstrings_byte_write"
+            ]
+        ]
+    },
+    {
+        "id": "trg_bitstrings_byte_write",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "Read Byte_write",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 160,
+        "y": 620,
+        "wires": [
+            [
+                "rd_bitstrings_byte_write"
+            ]
+        ]
+    },
+    {
+        "id": "rd_bitstrings_byte_write",
+        "type": "s7-plus read",
+        "z": "write_single_tab",
+        "name": "Byte_write",
+        "endpoint": "example_plc_ep",
+        "symbols": [
+            {
+                "name": "DB_BitStrings.Byte_write",
+                "address": "DB_BitStrings.Byte_write",
+                "datatype": "Byte"
+            }
+        ],
+        "outputFormat": "object",
+        "x": 590,
+        "y": 620,
+        "wires": [
+            [
+                "dbr_bitstrings_byte_write"
+            ]
+        ]
+    },
+    {
+        "id": "dbr_bitstrings_byte_write",
+        "type": "debug",
+        "z": "write_single_tab",
+        "name": "Byte read",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "false",
+        "statusVal": "payload[\"DB_BitStrings.Byte_write\"].value",
+        "statusType": "msg",
+        "x": 920,
+        "y": 620,
+        "wires": []
+    },
+    {
+        "id": "wr_bitstrings_word_write",
+        "type": "s7-plus write",
+        "z": "write_single_tab",
+        "name": "Word_write",
+        "endpoint": "example_plc_ep",
+        "symbols": [
+            {
+                "name": "DB_BitStrings.Word_write",
+                "address": "DB_BitStrings.Word_write",
+                "datatype": "Word"
+            }
+        ],
+        "outputFormat": "object",
+        "x": 590,
+        "y": 700,
+        "wires": [
+            [
+                "db_bitstrings_word_write"
+            ]
+        ]
+    },
+    {
+        "id": "db_bitstrings_word_write",
+        "type": "debug",
+        "z": "write_single_tab",
+        "name": "Word result",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "false",
+        "statusVal": "payload[\"DB_BitStrings.Word_write\"].value",
+        "statusType": "msg",
+        "x": 930,
+        "y": 700,
+        "wires": []
+    },
+    {
+        "id": "inj_bitstrings_word_min_0x0000",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "Word_Min_0x0000",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "0",
+        "payloadType": "num",
+        "x": 170,
+        "y": 700,
+        "wires": [
+            [
+                "wr_bitstrings_word_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_bitstrings_word_max_0xffff",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "Word_Max_0xFFFF",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "0xFFFF",
+        "payloadType": "num",
+        "x": 170,
+        "y": 740,
+        "wires": [
+            [
+                "wr_bitstrings_word_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_bitstrings_word_0xcafe",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "Word_0xCAFE",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "0xCAFE",
+        "payloadType": "num",
+        "x": 160,
+        "y": 780,
+        "wires": [
+            [
+                "wr_bitstrings_word_write"
+            ]
+        ]
+    },
+    {
+        "id": "trg_bitstrings_word_write",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "Read Word_write",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 160,
+        "y": 860,
+        "wires": [
+            [
+                "rd_bitstrings_word_write"
+            ]
+        ]
+    },
+    {
+        "id": "rd_bitstrings_word_write",
+        "type": "s7-plus read",
+        "z": "write_single_tab",
+        "name": "Word_write",
+        "endpoint": "example_plc_ep",
+        "symbols": [
+            {
+                "name": "DB_BitStrings.Word_write",
+                "address": "DB_BitStrings.Word_write",
+                "datatype": "Word"
+            }
+        ],
+        "outputFormat": "object",
+        "x": 590,
+        "y": 860,
+        "wires": [
+            [
+                "dbr_bitstrings_word_write"
+            ]
+        ]
+    },
+    {
+        "id": "dbr_bitstrings_word_write",
+        "type": "debug",
+        "z": "write_single_tab",
+        "name": "Word read",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "false",
+        "statusVal": "payload[\"DB_BitStrings.Word_write\"].value",
+        "statusType": "msg",
+        "x": 930,
+        "y": 860,
+        "wires": []
+    },
+    {
+        "id": "wr_bitstrings_dword_write",
+        "type": "s7-plus write",
+        "z": "write_single_tab",
+        "name": "DWord_write",
+        "endpoint": "example_plc_ep",
+        "symbols": [
+            {
+                "name": "DB_BitStrings.DWord_write",
+                "address": "DB_BitStrings.DWord_write",
+                "datatype": "DWord"
+            }
+        ],
+        "outputFormat": "object",
+        "x": 590,
+        "y": 940,
+        "wires": [
+            [
+                "db_bitstrings_dword_write"
+            ]
+        ]
+    },
+    {
+        "id": "db_bitstrings_dword_write",
+        "type": "debug",
+        "z": "write_single_tab",
+        "name": "DWord result",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "false",
+        "statusVal": "payload[\"DB_BitStrings.DWord_write\"].value",
+        "statusType": "msg",
+        "x": 930,
+        "y": 940,
+        "wires": []
+    },
+    {
+        "id": "inj_bitstrings_dword_min_0x00000000",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "DWord_Min_0x00000000",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "0",
+        "payloadType": "num",
+        "x": 190,
+        "y": 940,
+        "wires": [
+            [
+                "wr_bitstrings_dword_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_bitstrings_dword_max_0xffffffff",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "DWord_Max_0xFFFFFFFF",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "0xFFFFFFFF",
+        "payloadType": "num",
+        "x": 190,
+        "y": 980,
+        "wires": [
+            [
+                "wr_bitstrings_dword_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_bitstrings_dword_0xcafebabe",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "DWord_0xCAFEBABE",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "0xCAFEBABE",
+        "payloadType": "num",
+        "x": 180,
+        "y": 1020,
+        "wires": [
+            [
+                "wr_bitstrings_dword_write"
+            ]
+        ]
+    },
+    {
+        "id": "trg_bitstrings_dword_write",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "Read DWord_write",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 170,
+        "y": 1100,
+        "wires": [
+            [
+                "rd_bitstrings_dword_write"
+            ]
+        ]
+    },
+    {
+        "id": "rd_bitstrings_dword_write",
+        "type": "s7-plus read",
+        "z": "write_single_tab",
+        "name": "DWord_write",
+        "endpoint": "example_plc_ep",
+        "symbols": [
+            {
+                "name": "DB_BitStrings.DWord_write",
+                "address": "DB_BitStrings.DWord_write",
+                "datatype": "DWord"
+            }
+        ],
+        "outputFormat": "object",
+        "x": 590,
+        "y": 1100,
+        "wires": [
+            [
+                "dbr_bitstrings_dword_write"
+            ]
+        ]
+    },
+    {
+        "id": "dbr_bitstrings_dword_write",
+        "type": "debug",
+        "z": "write_single_tab",
+        "name": "DWord read",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "false",
+        "statusVal": "payload[\"DB_BitStrings.DWord_write\"].value",
+        "statusType": "msg",
+        "x": 930,
+        "y": 1100,
+        "wires": []
+    },
+    {
+        "id": "wr_bitstrings_lword_write",
+        "type": "s7-plus write",
+        "z": "write_single_tab",
+        "name": "LWord_write",
+        "endpoint": "example_plc_ep",
+        "symbols": [
+            {
+                "name": "DB_BitStrings.LWord_write",
+                "address": "DB_BitStrings.LWord_write",
+                "datatype": "LWord"
+            }
+        ],
+        "outputFormat": "object",
+        "x": 590,
+        "y": 1180,
+        "wires": [
+            [
+                "db_bitstrings_lword_write"
+            ]
+        ]
+    },
+    {
+        "id": "db_bitstrings_lword_write",
+        "type": "debug",
+        "z": "write_single_tab",
+        "name": "LWord result",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "false",
+        "statusVal": "payload[\"DB_BitStrings.LWord_write\"].value",
+        "statusType": "msg",
+        "x": 930,
+        "y": 1180,
+        "wires": []
+    },
+    {
+        "id": "inj_bitstrings_lword_min_0x0000000000000000",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "LWord_Min_0x0000000000000000",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "0x0",
+        "payloadType": "str",
+        "x": 220,
+        "y": 1180,
+        "wires": [
+            [
+                "wr_bitstrings_lword_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_bitstrings_lword_max_0xffffffffffffffff",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "LWord_Max_0xFFFFFFFFFFFFFFFF",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "0xFFFFFFFFFFFFFFFF",
+        "payloadType": "str",
+        "x": 230,
+        "y": 1220,
+        "wires": [
+            [
+                "wr_bitstrings_lword_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_bitstrings_lword_0x12345678abcdefab",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "LWord_0x12345678ABCDEFAB",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "0x12345678ABCDEFAB",
+        "payloadType": "str",
+        "x": 210,
+        "y": 1260,
+        "wires": [
+            [
+                "wr_bitstrings_lword_write"
+            ]
+        ]
+    },
+    {
+        "id": "trg_bitstrings_lword_write",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "Read LWord_write",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 170,
+        "y": 1340,
+        "wires": [
+            [
+                "rd_bitstrings_lword_write"
+            ]
+        ]
+    },
+    {
+        "id": "rd_bitstrings_lword_write",
+        "type": "s7-plus read",
+        "z": "write_single_tab",
+        "name": "LWord_write",
+        "endpoint": "example_plc_ep",
+        "symbols": [
+            {
+                "name": "DB_BitStrings.LWord_write",
+                "address": "DB_BitStrings.LWord_write",
+                "datatype": "LWord"
+            }
+        ],
+        "outputFormat": "object",
+        "x": 590,
+        "y": 1340,
+        "wires": [
+            [
+                "dbr_bitstrings_lword_write"
+            ]
+        ]
+    },
+    {
+        "id": "dbr_bitstrings_lword_write",
+        "type": "debug",
+        "z": "write_single_tab",
+        "name": "LWord read",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "false",
+        "statusVal": "payload[\"DB_BitStrings.LWord_write\"].value",
+        "statusType": "msg",
+        "x": 930,
+        "y": 1340,
+        "wires": []
+    },
+    {
+        "id": "sec_characterstrings",
+        "type": "comment",
+        "z": "write_single_tab",
+        "name": "CharacterStrings",
+        "info": "DB_CharacterStrings",
+        "x": 160,
+        "y": 1460,
+        "wires": []
+    },
+    {
+        "id": "wr_characterstrings_char_write",
+        "type": "s7-plus write",
+        "z": "write_single_tab",
+        "name": "Char_write",
+        "endpoint": "example_plc_ep",
+        "symbols": [
+            {
+                "name": "DB_CharacterStrings.Char_write",
+                "address": "DB_CharacterStrings.Char_write",
+                "datatype": "Char"
+            }
+        ],
+        "outputFormat": "object",
+        "x": 590,
+        "y": 1500,
+        "wires": [
+            [
+                "db_characterstrings_char_write"
+            ]
+        ]
+    },
+    {
+        "id": "db_characterstrings_char_write",
+        "type": "debug",
+        "z": "write_single_tab",
+        "name": "Char result",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "false",
+        "statusVal": "payload[\"DB_CharacterStrings.Char_write\"].value",
+        "statusType": "msg",
+        "x": 930,
+        "y": 1500,
+        "wires": []
+    },
+    {
+        "id": "inj_characterstrings_char_space",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "Char_Space",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": " ",
+        "payloadType": "str",
+        "x": 150,
+        "y": 1500,
+        "wires": [
+            [
+                "wr_characterstrings_char_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_characterstrings_char_a",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "Char_A",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "A",
+        "payloadType": "str",
+        "x": 130,
+        "y": 1540,
+        "wires": [
+            [
+                "wr_characterstrings_char_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_characterstrings_char_auml",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "Char_auml",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "ä",
+        "payloadType": "str",
+        "x": 140,
+        "y": 1580,
+        "wires": [
+            [
+                "wr_characterstrings_char_write"
+            ]
+        ]
+    },
+    {
+        "id": "trg_characterstrings_char_write",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "Read Char_write",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 160,
+        "y": 1660,
+        "wires": [
+            [
+                "rd_characterstrings_char_write"
+            ]
+        ]
+    },
+    {
+        "id": "rd_characterstrings_char_write",
+        "type": "s7-plus read",
+        "z": "write_single_tab",
+        "name": "Char_write",
+        "endpoint": "example_plc_ep",
+        "symbols": [
+            {
+                "name": "DB_CharacterStrings.Char_write",
+                "address": "DB_CharacterStrings.Char_write",
+                "datatype": "Char"
+            }
+        ],
+        "outputFormat": "object",
+        "x": 590,
+        "y": 1660,
+        "wires": [
+            [
+                "dbr_characterstrings_char_write"
+            ]
+        ]
+    },
+    {
+        "id": "dbr_characterstrings_char_write",
+        "type": "debug",
+        "z": "write_single_tab",
+        "name": "Char read",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "false",
+        "statusVal": "payload[\"DB_CharacterStrings.Char_write\"].value",
+        "statusType": "msg",
+        "x": 920,
+        "y": 1660,
+        "wires": []
+    },
+    {
+        "id": "wr_characterstrings_string_write",
+        "type": "s7-plus write",
+        "z": "write_single_tab",
+        "name": "String_write",
+        "endpoint": "example_plc_ep",
+        "symbols": [
+            {
+                "name": "DB_CharacterStrings.String_write",
+                "address": "DB_CharacterStrings.String_write",
+                "datatype": "String"
+            }
+        ],
+        "outputFormat": "object",
+        "x": 590,
+        "y": 1740,
+        "wires": [
+            [
+                "db_characterstrings_string_write"
+            ]
+        ]
+    },
+    {
+        "id": "db_characterstrings_string_write",
+        "type": "debug",
+        "z": "write_single_tab",
+        "name": "String result",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "false",
+        "statusVal": "payload[\"DB_CharacterStrings.String_write\"].value",
+        "statusType": "msg",
+        "x": 930,
+        "y": 1740,
+        "wires": []
+    },
+    {
+        "id": "inj_characterstrings_string_empty",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "String_Empty",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "str",
+        "x": 150,
+        "y": 1740,
+        "wires": [
+            [
+                "wr_characterstrings_string_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_characterstrings_string_hello_world",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "String_Hello_World",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "Hello World",
+        "payloadType": "str",
+        "x": 170,
+        "y": 1780,
+        "wires": [
+            [
+                "wr_characterstrings_string_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_characterstrings_string_moumltoumlrhead",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "String_Moumltoumlrhead",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "Mötörhead",
+        "payloadType": "str",
+        "x": 190,
+        "y": 1820,
+        "wires": [
+            [
+                "wr_characterstrings_string_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_characterstrings_string_len4_test",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "String_Len4_Test",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "Test",
+        "payloadType": "str",
+        "x": 170,
+        "y": 1860,
+        "wires": [
+            [
+                "wr_characterstrings_string_write"
+            ]
+        ]
+    },
+    {
+        "id": "trg_characterstrings_string_write",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "Read String_write",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 170,
+        "y": 1940,
+        "wires": [
+            [
+                "rd_characterstrings_string_write"
+            ]
+        ]
+    },
+    {
+        "id": "rd_characterstrings_string_write",
+        "type": "s7-plus read",
+        "z": "write_single_tab",
+        "name": "String_write",
+        "endpoint": "example_plc_ep",
+        "symbols": [
+            {
+                "name": "DB_CharacterStrings.String_write",
+                "address": "DB_CharacterStrings.String_write",
+                "datatype": "String"
+            }
+        ],
+        "outputFormat": "object",
+        "x": 590,
+        "y": 1940,
+        "wires": [
+            [
+                "dbr_characterstrings_string_write"
+            ]
+        ]
+    },
+    {
+        "id": "dbr_characterstrings_string_write",
+        "type": "debug",
+        "z": "write_single_tab",
+        "name": "String read",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "false",
+        "statusVal": "payload[\"DB_CharacterStrings.String_write\"].value",
+        "statusType": "msg",
+        "x": 930,
+        "y": 1940,
+        "wires": []
+    },
+    {
+        "id": "wr_characterstrings_wchar_write",
+        "type": "s7-plus write",
+        "z": "write_single_tab",
+        "name": "WChar_write",
+        "endpoint": "example_plc_ep",
+        "symbols": [
+            {
+                "name": "DB_CharacterStrings.WChar_write",
+                "address": "DB_CharacterStrings.WChar_write",
+                "datatype": "WChar"
+            }
+        ],
+        "outputFormat": "object",
+        "x": 590,
+        "y": 2020,
+        "wires": [
+            [
+                "db_characterstrings_wchar_write"
+            ]
+        ]
+    },
+    {
+        "id": "db_characterstrings_wchar_write",
+        "type": "debug",
+        "z": "write_single_tab",
+        "name": "WChar result",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "false",
+        "statusVal": "payload[\"DB_CharacterStrings.WChar_write\"].value",
+        "statusType": "msg",
+        "x": 930,
+        "y": 2020,
+        "wires": []
+    },
+    {
+        "id": "inj_characterstrings_wchar_space",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "WChar_Space",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": " ",
+        "payloadType": "str",
+        "x": 160,
+        "y": 2020,
+        "wires": [
+            [
+                "wr_characterstrings_wchar_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_characterstrings_wchar_auml",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "WChar_auml",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "ä",
+        "payloadType": "str",
+        "x": 150,
+        "y": 2060,
+        "wires": [
+            [
+                "wr_characterstrings_wchar_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_characterstrings_wchar_x",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "WChar_X",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "X",
+        "payloadType": "str",
+        "x": 140,
+        "y": 2100,
+        "wires": [
+            [
+                "wr_characterstrings_wchar_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_characterstrings_wchar_greeksigmabig",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "WChar_GreekSigmaBig",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "Ʃ",
+        "payloadType": "str",
+        "x": 180,
+        "y": 2140,
+        "wires": [
+            [
+                "wr_characterstrings_wchar_write"
+            ]
+        ]
+    },
+    {
+        "id": "trg_characterstrings_wchar_write",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "Read WChar_write",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 170,
+        "y": 2220,
+        "wires": [
+            [
+                "rd_characterstrings_wchar_write"
+            ]
+        ]
+    },
+    {
+        "id": "rd_characterstrings_wchar_write",
+        "type": "s7-plus read",
+        "z": "write_single_tab",
+        "name": "WChar_write",
+        "endpoint": "example_plc_ep",
+        "symbols": [
+            {
+                "name": "DB_CharacterStrings.WChar_write",
+                "address": "DB_CharacterStrings.WChar_write",
+                "datatype": "WChar"
+            }
+        ],
+        "outputFormat": "object",
+        "x": 590,
+        "y": 2220,
+        "wires": [
+            [
+                "dbr_characterstrings_wchar_write"
+            ]
+        ]
+    },
+    {
+        "id": "dbr_characterstrings_wchar_write",
+        "type": "debug",
+        "z": "write_single_tab",
+        "name": "WChar read",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "false",
+        "statusVal": "payload[\"DB_CharacterStrings.WChar_write\"].value",
+        "statusType": "msg",
+        "x": 930,
+        "y": 2220,
+        "wires": []
+    },
+    {
+        "id": "wr_characterstrings_wstring_write",
+        "type": "s7-plus write",
+        "z": "write_single_tab",
+        "name": "WString_write",
+        "endpoint": "example_plc_ep",
+        "symbols": [
+            {
+                "name": "DB_CharacterStrings.WString_write",
+                "address": "DB_CharacterStrings.WString_write",
+                "datatype": "WString"
+            }
+        ],
+        "outputFormat": "object",
+        "x": 600,
+        "y": 2300,
+        "wires": [
+            [
+                "db_characterstrings_wstring_write"
+            ]
+        ]
+    },
+    {
+        "id": "db_characterstrings_wstring_write",
+        "type": "debug",
+        "z": "write_single_tab",
+        "name": "WString result",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "false",
+        "statusVal": "payload[\"DB_CharacterStrings.WString_write\"].value",
+        "statusType": "msg",
+        "x": 940,
+        "y": 2300,
+        "wires": []
+    },
+    {
+        "id": "inj_characterstrings_wstring_empty",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "WString_Empty",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "str",
+        "x": 160,
+        "y": 2300,
+        "wires": [
+            [
+                "wr_characterstrings_wstring_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_characterstrings_wstring_moumltoumlrhead",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "WString_Moumltoumlrhead",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "Mötörhead",
+        "payloadType": "str",
+        "x": 190,
+        "y": 2340,
+        "wires": [
+            [
+                "wr_characterstrings_wstring_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_characterstrings_wstring_greek1",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "WString_Greek1",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "Test Greek ΣΛΔ end.",
+        "payloadType": "str",
+        "x": 160,
+        "y": 2380,
+        "wires": [
+            [
+                "wr_characterstrings_wstring_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_characterstrings_wstring_len4_test",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "WString_Len4_Test",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "Test",
+        "payloadType": "str",
+        "x": 170,
+        "y": 2420,
+        "wires": [
+            [
+                "wr_characterstrings_wstring_write"
+            ]
+        ]
+    },
+    {
+        "id": "trg_characterstrings_wstring_write",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "Read WString_write",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 170,
+        "y": 2500,
+        "wires": [
+            [
+                "rd_characterstrings_wstring_write"
+            ]
+        ]
+    },
+    {
+        "id": "rd_characterstrings_wstring_write",
+        "type": "s7-plus read",
+        "z": "write_single_tab",
+        "name": "WString_write",
+        "endpoint": "example_plc_ep",
+        "symbols": [
+            {
+                "name": "DB_CharacterStrings.WString_write",
+                "address": "DB_CharacterStrings.WString_write",
+                "datatype": "WString"
+            }
+        ],
+        "outputFormat": "object",
+        "x": 600,
+        "y": 2500,
+        "wires": [
+            [
+                "dbr_characterstrings_wstring_write"
+            ]
+        ]
+    },
+    {
+        "id": "dbr_characterstrings_wstring_write",
+        "type": "debug",
+        "z": "write_single_tab",
+        "name": "WString read",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "false",
+        "statusVal": "payload[\"DB_CharacterStrings.WString_write\"].value",
+        "statusType": "msg",
+        "x": 930,
+        "y": 2500,
+        "wires": []
+    },
+    {
+        "id": "sec_integers",
+        "type": "comment",
+        "z": "write_single_tab",
+        "name": "Integers",
+        "info": "DB_Integers",
+        "x": 140,
+        "y": 2620,
+        "wires": []
+    },
+    {
+        "id": "wr_integers_sint_write",
+        "type": "s7-plus write",
+        "z": "write_single_tab",
+        "name": "SInt_write",
+        "endpoint": "example_plc_ep",
+        "symbols": [
+            {
+                "name": "DB_Integers.SInt_write",
+                "address": "DB_Integers.SInt_write",
+                "datatype": "SInt"
+            }
+        ],
+        "outputFormat": "object",
+        "x": 580,
+        "y": 2660,
+        "wires": [
+            [
+                "db_integers_sint_write"
+            ]
+        ]
+    },
+    {
+        "id": "db_integers_sint_write",
+        "type": "debug",
+        "z": "write_single_tab",
+        "name": "SInt result",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "false",
+        "statusVal": "payload[\"DB_Integers.SInt_write\"].value",
+        "statusType": "msg",
+        "x": 920,
+        "y": 2660,
+        "wires": []
+    },
+    {
+        "id": "inj_integers_sint_min_n128",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "SInt_Min_n128",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "-128",
+        "payloadType": "num",
+        "x": 160,
+        "y": 2660,
+        "wires": [
+            [
+                "wr_integers_sint_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_integers_sint_max_127",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "SInt_Max_127",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "127",
+        "payloadType": "num",
+        "x": 150,
+        "y": 2700,
+        "wires": [
+            [
+                "wr_integers_sint_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_integers_sint_123",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "SInt_123",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "123",
+        "payloadType": "num",
+        "x": 140,
+        "y": 2740,
+        "wires": [
+            [
+                "wr_integers_sint_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_integers_sint_n123",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "SInt_n123",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "-123",
+        "payloadType": "num",
+        "x": 140,
+        "y": 2780,
+        "wires": [
+            [
+                "wr_integers_sint_write"
+            ]
+        ]
+    },
+    {
+        "id": "trg_integers_sint_write",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "Read SInt_write",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 160,
+        "y": 2860,
+        "wires": [
+            [
+                "rd_integers_sint_write"
+            ]
+        ]
+    },
+    {
+        "id": "rd_integers_sint_write",
+        "type": "s7-plus read",
+        "z": "write_single_tab",
+        "name": "SInt_write",
+        "endpoint": "example_plc_ep",
+        "symbols": [
+            {
+                "name": "DB_Integers.SInt_write",
+                "address": "DB_Integers.SInt_write",
+                "datatype": "SInt"
+            }
+        ],
+        "outputFormat": "object",
+        "x": 580,
+        "y": 2860,
+        "wires": [
+            [
+                "dbr_integers_sint_write"
+            ]
+        ]
+    },
+    {
+        "id": "dbr_integers_sint_write",
+        "type": "debug",
+        "z": "write_single_tab",
+        "name": "SInt read",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "false",
+        "statusVal": "payload[\"DB_Integers.SInt_write\"].value",
+        "statusType": "msg",
+        "x": 920,
+        "y": 2860,
+        "wires": []
+    },
+    {
+        "id": "wr_integers_int_write",
+        "type": "s7-plus write",
+        "z": "write_single_tab",
+        "name": "Int_write",
+        "endpoint": "example_plc_ep",
+        "symbols": [
+            {
+                "name": "DB_Integers.Int_write",
+                "address": "DB_Integers.Int_write",
+                "datatype": "Int"
+            }
+        ],
+        "outputFormat": "object",
+        "x": 580,
+        "y": 2940,
+        "wires": [
+            [
+                "db_integers_int_write"
+            ]
+        ]
+    },
+    {
+        "id": "db_integers_int_write",
+        "type": "debug",
+        "z": "write_single_tab",
+        "name": "Int result",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "false",
+        "statusVal": "payload[\"DB_Integers.Int_write\"].value",
+        "statusType": "msg",
+        "x": 920,
+        "y": 2940,
+        "wires": []
+    },
+    {
+        "id": "inj_integers_int_min_n32768",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "Int_Min_n32768",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "-32768",
+        "payloadType": "num",
+        "x": 160,
+        "y": 2940,
+        "wires": [
+            [
+                "wr_integers_int_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_integers_int_max_32767",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "Int_Max_32767",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "32767",
+        "payloadType": "num",
+        "x": 160,
+        "y": 2980,
+        "wires": [
+            [
+                "wr_integers_int_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_integers_int_12345",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "Int_12345",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "12345",
+        "payloadType": "num",
+        "x": 140,
+        "y": 3020,
+        "wires": [
+            [
+                "wr_integers_int_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_integers_int_n9876",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "Int_n9876",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "-9876",
+        "payloadType": "num",
+        "x": 140,
+        "y": 3060,
+        "wires": [
+            [
+                "wr_integers_int_write"
+            ]
+        ]
+    },
+    {
+        "id": "trg_integers_int_write",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "Read Int_write",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 150,
+        "y": 3140,
+        "wires": [
+            [
+                "rd_integers_int_write"
+            ]
+        ]
+    },
+    {
+        "id": "rd_integers_int_write",
+        "type": "s7-plus read",
+        "z": "write_single_tab",
+        "name": "Int_write",
+        "endpoint": "example_plc_ep",
+        "symbols": [
+            {
+                "name": "DB_Integers.Int_write",
+                "address": "DB_Integers.Int_write",
+                "datatype": "Int"
+            }
+        ],
+        "outputFormat": "object",
+        "x": 580,
+        "y": 3140,
+        "wires": [
+            [
+                "dbr_integers_int_write"
+            ]
+        ]
+    },
+    {
+        "id": "dbr_integers_int_write",
+        "type": "debug",
+        "z": "write_single_tab",
+        "name": "Int read",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "false",
+        "statusVal": "payload[\"DB_Integers.Int_write\"].value",
+        "statusType": "msg",
+        "x": 920,
+        "y": 3140,
+        "wires": []
+    },
+    {
+        "id": "wr_integers_dint_write",
+        "type": "s7-plus write",
+        "z": "write_single_tab",
+        "name": "DInt_write",
+        "endpoint": "example_plc_ep",
+        "symbols": [
+            {
+                "name": "DB_Integers.DInt_write",
+                "address": "DB_Integers.DInt_write",
+                "datatype": "DInt"
+            }
+        ],
+        "outputFormat": "object",
+        "x": 580,
+        "y": 3220,
+        "wires": [
+            [
+                "db_integers_dint_write"
+            ]
+        ]
+    },
+    {
+        "id": "db_integers_dint_write",
+        "type": "debug",
+        "z": "write_single_tab",
+        "name": "DInt result",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "false",
+        "statusVal": "payload[\"DB_Integers.DInt_write\"].value",
+        "statusType": "msg",
+        "x": 930,
+        "y": 3220,
+        "wires": []
+    },
+    {
+        "id": "inj_integers_dint_min_n2147483648",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "DInt_Min_n2147483648",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "-2147483648",
+        "payloadType": "num",
+        "x": 180,
+        "y": 3220,
+        "wires": [
+            [
+                "wr_integers_dint_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_integers_dint_max_2147483647",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "DInt_Max_2147483647",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "2147483647",
+        "payloadType": "num",
+        "x": 180,
+        "y": 3260,
+        "wires": [
+            [
+                "wr_integers_dint_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_integers_dint_1234567890",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "DInt_1234567890",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "1234567890",
+        "payloadType": "num",
+        "x": 170,
+        "y": 3300,
+        "wires": [
+            [
+                "wr_integers_dint_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_integers_dint_n987654321",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "DInt_n987654321",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "-987654321",
+        "payloadType": "num",
+        "x": 170,
+        "y": 3340,
+        "wires": [
+            [
+                "wr_integers_dint_write"
+            ]
+        ]
+    },
+    {
+        "id": "trg_integers_dint_write",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "Read DInt_write",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 160,
+        "y": 3420,
+        "wires": [
+            [
+                "rd_integers_dint_write"
+            ]
+        ]
+    },
+    {
+        "id": "rd_integers_dint_write",
+        "type": "s7-plus read",
+        "z": "write_single_tab",
+        "name": "DInt_write",
+        "endpoint": "example_plc_ep",
+        "symbols": [
+            {
+                "name": "DB_Integers.DInt_write",
+                "address": "DB_Integers.DInt_write",
+                "datatype": "DInt"
+            }
+        ],
+        "outputFormat": "object",
+        "x": 580,
+        "y": 3420,
+        "wires": [
+            [
+                "dbr_integers_dint_write"
+            ]
+        ]
+    },
+    {
+        "id": "dbr_integers_dint_write",
+        "type": "debug",
+        "z": "write_single_tab",
+        "name": "DInt read",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "false",
+        "statusVal": "payload[\"DB_Integers.DInt_write\"].value",
+        "statusType": "msg",
+        "x": 920,
+        "y": 3420,
+        "wires": []
+    },
+    {
+        "id": "wr_integers_usint_write",
+        "type": "s7-plus write",
+        "z": "write_single_tab",
+        "name": "USInt_write",
+        "endpoint": "example_plc_ep",
+        "symbols": [
+            {
+                "name": "DB_Integers.USInt_write",
+                "address": "DB_Integers.USInt_write",
+                "datatype": "USInt"
+            }
+        ],
+        "outputFormat": "object",
+        "x": 590,
+        "y": 3500,
+        "wires": [
+            [
+                "db_integers_usint_write"
+            ]
+        ]
+    },
+    {
+        "id": "db_integers_usint_write",
+        "type": "debug",
+        "z": "write_single_tab",
+        "name": "USInt result",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "false",
+        "statusVal": "payload[\"DB_Integers.USInt_write\"].value",
+        "statusType": "msg",
+        "x": 930,
+        "y": 3500,
+        "wires": []
+    },
+    {
+        "id": "inj_integers_usint_min_0",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "USint_Min_0",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "0",
+        "payloadType": "num",
+        "x": 150,
+        "y": 3500,
+        "wires": [
+            [
+                "wr_integers_usint_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_integers_usint_max_255",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "USInt_Max_255",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "255",
+        "payloadType": "num",
+        "x": 160,
+        "y": 3540,
+        "wires": [
+            [
+                "wr_integers_usint_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_integers_usint_123",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "USInt_123",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "123",
+        "payloadType": "num",
+        "x": 140,
+        "y": 3580,
+        "wires": [
+            [
+                "wr_integers_usint_write"
+            ]
+        ]
+    },
+    {
+        "id": "trg_integers_usint_write",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "Read USInt_write",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 160,
+        "y": 3660,
+        "wires": [
+            [
+                "rd_integers_usint_write"
+            ]
+        ]
+    },
+    {
+        "id": "rd_integers_usint_write",
+        "type": "s7-plus read",
+        "z": "write_single_tab",
+        "name": "USInt_write",
+        "endpoint": "example_plc_ep",
+        "symbols": [
+            {
+                "name": "DB_Integers.USInt_write",
+                "address": "DB_Integers.USInt_write",
+                "datatype": "USInt"
+            }
+        ],
+        "outputFormat": "object",
+        "x": 590,
+        "y": 3660,
+        "wires": [
+            [
+                "dbr_integers_usint_write"
+            ]
+        ]
+    },
+    {
+        "id": "dbr_integers_usint_write",
+        "type": "debug",
+        "z": "write_single_tab",
+        "name": "USInt read",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "false",
+        "statusVal": "payload[\"DB_Integers.USInt_write\"].value",
+        "statusType": "msg",
+        "x": 930,
+        "y": 3660,
+        "wires": []
+    },
+    {
+        "id": "wr_integers_uint_write",
+        "type": "s7-plus write",
+        "z": "write_single_tab",
+        "name": "UInt_write",
+        "endpoint": "example_plc_ep",
+        "symbols": [
+            {
+                "name": "DB_Integers.UInt_write",
+                "address": "DB_Integers.UInt_write",
+                "datatype": "UInt"
+            }
+        ],
+        "outputFormat": "object",
+        "x": 580,
+        "y": 3740,
+        "wires": [
+            [
+                "db_integers_uint_write"
+            ]
+        ]
+    },
+    {
+        "id": "db_integers_uint_write",
+        "type": "debug",
+        "z": "write_single_tab",
+        "name": "UInt result",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "false",
+        "statusVal": "payload[\"DB_Integers.UInt_write\"].value",
+        "statusType": "msg",
+        "x": 930,
+        "y": 3740,
+        "wires": []
+    },
+    {
+        "id": "inj_integers_uint_min_0",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "UInt_Min_0",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "0",
+        "payloadType": "num",
+        "x": 150,
+        "y": 3740,
+        "wires": [
+            [
+                "wr_integers_uint_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_integers_uint_max_65535",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "UInt_Max_65535",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "65535",
+        "payloadType": "num",
+        "x": 160,
+        "y": 3780,
+        "wires": [
+            [
+                "wr_integers_uint_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_integers_uint_12345",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "UInt_12345",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "12345",
+        "payloadType": "num",
+        "x": 150,
+        "y": 3820,
+        "wires": [
+            [
+                "wr_integers_uint_write"
+            ]
+        ]
+    },
+    {
+        "id": "trg_integers_uint_write",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "Read UInt_write",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 160,
+        "y": 3900,
+        "wires": [
+            [
+                "rd_integers_uint_write"
+            ]
+        ]
+    },
+    {
+        "id": "rd_integers_uint_write",
+        "type": "s7-plus read",
+        "z": "write_single_tab",
+        "name": "UInt_write",
+        "endpoint": "example_plc_ep",
+        "symbols": [
+            {
+                "name": "DB_Integers.UInt_write",
+                "address": "DB_Integers.UInt_write",
+                "datatype": "UInt"
+            }
+        ],
+        "outputFormat": "object",
+        "x": 580,
+        "y": 3900,
+        "wires": [
+            [
+                "dbr_integers_uint_write"
+            ]
+        ]
+    },
+    {
+        "id": "dbr_integers_uint_write",
+        "type": "debug",
+        "z": "write_single_tab",
+        "name": "UInt read",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "false",
+        "statusVal": "payload[\"DB_Integers.UInt_write\"].value",
+        "statusType": "msg",
+        "x": 920,
+        "y": 3900,
+        "wires": []
+    },
+    {
+        "id": "wr_integers_udint_write",
+        "type": "s7-plus write",
+        "z": "write_single_tab",
+        "name": "UDInt_write",
+        "endpoint": "example_plc_ep",
+        "symbols": [
+            {
+                "name": "DB_Integers.UDInt_write",
+                "address": "DB_Integers.UDInt_write",
+                "datatype": "UDInt"
+            }
+        ],
+        "outputFormat": "object",
+        "x": 590,
+        "y": 3980,
+        "wires": [
+            [
+                "db_integers_udint_write"
+            ]
+        ]
+    },
+    {
+        "id": "db_integers_udint_write",
+        "type": "debug",
+        "z": "write_single_tab",
+        "name": "UDInt result",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "false",
+        "statusVal": "payload[\"DB_Integers.UDInt_write\"].value",
+        "statusType": "msg",
+        "x": 930,
+        "y": 3980,
+        "wires": []
+    },
+    {
+        "id": "inj_integers_udint_min_0",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "UDInt_Min_0",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "0",
+        "payloadType": "num",
+        "x": 150,
+        "y": 3980,
+        "wires": [
+            [
+                "wr_integers_udint_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_integers_udint_max_4294967295",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "UDInt_Max_4294967295",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "4294967295",
+        "payloadType": "num",
+        "x": 190,
+        "y": 4020,
+        "wires": [
+            [
+                "wr_integers_udint_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_integers_udint_1234567890",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "UDint_1234567890",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "1234567890",
+        "payloadType": "num",
+        "x": 170,
+        "y": 4060,
+        "wires": [
+            [
+                "wr_integers_udint_write"
+            ]
+        ]
+    },
+    {
+        "id": "trg_integers_udint_write",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "Read UDInt_write",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 160,
+        "y": 4140,
+        "wires": [
+            [
+                "rd_integers_udint_write"
+            ]
+        ]
+    },
+    {
+        "id": "rd_integers_udint_write",
+        "type": "s7-plus read",
+        "z": "write_single_tab",
+        "name": "UDInt_write",
+        "endpoint": "example_plc_ep",
+        "symbols": [
+            {
+                "name": "DB_Integers.UDInt_write",
+                "address": "DB_Integers.UDInt_write",
+                "datatype": "UDInt"
+            }
+        ],
+        "outputFormat": "object",
+        "x": 590,
+        "y": 4140,
+        "wires": [
+            [
+                "dbr_integers_udint_write"
+            ]
+        ]
+    },
+    {
+        "id": "dbr_integers_udint_write",
+        "type": "debug",
+        "z": "write_single_tab",
+        "name": "UDInt read",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "false",
+        "statusVal": "payload[\"DB_Integers.UDInt_write\"].value",
+        "statusType": "msg",
+        "x": 930,
+        "y": 4140,
+        "wires": []
+    },
+    {
+        "id": "wr_integers_lint_write",
+        "type": "s7-plus write",
+        "z": "write_single_tab",
+        "name": "LInt_write",
+        "endpoint": "example_plc_ep",
+        "symbols": [
+            {
+                "name": "DB_Integers.LInt_write",
+                "address": "DB_Integers.LInt_write",
+                "datatype": "LInt"
+            }
+        ],
+        "outputFormat": "object",
+        "x": 580,
+        "y": 4220,
+        "wires": [
+            [
+                "db_integers_lint_write"
+            ]
+        ]
+    },
+    {
+        "id": "db_integers_lint_write",
+        "type": "debug",
+        "z": "write_single_tab",
+        "name": "LInt result",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "false",
+        "statusVal": "payload[\"DB_Integers.LInt_write\"].value",
+        "statusType": "msg",
+        "x": 920,
+        "y": 4220,
+        "wires": []
+    },
+    {
+        "id": "inj_integers_lint_min_n9223372036854775808",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "LInt_Min_n9223372036854775808",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "-9223372036854775808",
+        "payloadType": "str",
+        "x": 220,
+        "y": 4220,
+        "wires": [
+            [
+                "wr_integers_lint_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_integers_lint_max_9223372036854775807",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "LInt_Max_9223372036854775807",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "9223372036854775807",
+        "payloadType": "str",
+        "x": 220,
+        "y": 4260,
+        "wires": [
+            [
+                "wr_integers_lint_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_integers_lint_1234567890123456789",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "LInt_1234567890123456789",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "1234567890123456789",
+        "payloadType": "str",
+        "x": 200,
+        "y": 4300,
+        "wires": [
+            [
+                "wr_integers_lint_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_integers_lint_n987654321098765432",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "LInt_n987654321098765432",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "-987654321098765432",
+        "payloadType": "str",
+        "x": 200,
+        "y": 4340,
+        "wires": [
+            [
+                "wr_integers_lint_write"
+            ]
+        ]
+    },
+    {
+        "id": "trg_integers_lint_write",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "Read LInt_write",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 160,
+        "y": 4420,
+        "wires": [
+            [
+                "rd_integers_lint_write"
+            ]
+        ]
+    },
+    {
+        "id": "rd_integers_lint_write",
+        "type": "s7-plus read",
+        "z": "write_single_tab",
+        "name": "LInt_write",
+        "endpoint": "example_plc_ep",
+        "symbols": [
+            {
+                "name": "DB_Integers.LInt_write",
+                "address": "DB_Integers.LInt_write",
+                "datatype": "LInt"
+            }
+        ],
+        "outputFormat": "object",
+        "x": 580,
+        "y": 4420,
+        "wires": [
+            [
+                "dbr_integers_lint_write"
+            ]
+        ]
+    },
+    {
+        "id": "dbr_integers_lint_write",
+        "type": "debug",
+        "z": "write_single_tab",
+        "name": "LInt read",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "false",
+        "statusVal": "payload[\"DB_Integers.LInt_write\"].value",
+        "statusType": "msg",
+        "x": 920,
+        "y": 4420,
+        "wires": []
+    },
+    {
+        "id": "wr_integers_ulint_write",
+        "type": "s7-plus write",
+        "z": "write_single_tab",
+        "name": "ULInt_write",
+        "endpoint": "example_plc_ep",
+        "symbols": [
+            {
+                "name": "DB_Integers.ULInt_write",
+                "address": "DB_Integers.ULInt_write",
+                "datatype": "ULInt"
+            }
+        ],
+        "outputFormat": "object",
+        "x": 590,
+        "y": 4500,
+        "wires": [
+            [
+                "db_integers_ulint_write"
+            ]
+        ]
+    },
+    {
+        "id": "db_integers_ulint_write",
+        "type": "debug",
+        "z": "write_single_tab",
+        "name": "ULInt result",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "false",
+        "statusVal": "payload[\"DB_Integers.ULInt_write\"].value",
+        "statusType": "msg",
+        "x": 930,
+        "y": 4500,
+        "wires": []
+    },
+    {
+        "id": "inj_integers_ulint_min_0",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "ULInt_Min_0",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "0",
+        "payloadType": "str",
+        "x": 150,
+        "y": 4500,
+        "wires": [
+            [
+                "wr_integers_ulint_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_integers_ulint_max_18446744073709551615",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "ULInt_Max_18446744073709551615",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "18446744073709551615",
+        "payloadType": "str",
+        "x": 230,
+        "y": 4540,
+        "wires": [
+            [
+                "wr_integers_ulint_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_integers_ulint_12345678901234567890",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "ULInt_12345678901234567890",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "12345678901234567890",
+        "payloadType": "str",
+        "x": 210,
+        "y": 4580,
+        "wires": [
+            [
+                "wr_integers_ulint_write"
+            ]
+        ]
+    },
+    {
+        "id": "trg_integers_ulint_write",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "Read ULInt_write",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 160,
+        "y": 4660,
+        "wires": [
+            [
+                "rd_integers_ulint_write"
+            ]
+        ]
+    },
+    {
+        "id": "rd_integers_ulint_write",
+        "type": "s7-plus read",
+        "z": "write_single_tab",
+        "name": "ULInt_write",
+        "endpoint": "example_plc_ep",
+        "symbols": [
+            {
+                "name": "DB_Integers.ULInt_write",
+                "address": "DB_Integers.ULInt_write",
+                "datatype": "ULInt"
+            }
+        ],
+        "outputFormat": "object",
+        "x": 590,
+        "y": 4660,
+        "wires": [
+            [
+                "dbr_integers_ulint_write"
+            ]
+        ]
+    },
+    {
+        "id": "dbr_integers_ulint_write",
+        "type": "debug",
+        "z": "write_single_tab",
+        "name": "ULInt read",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "false",
+        "statusVal": "payload[\"DB_Integers.ULInt_write\"].value",
+        "statusType": "msg",
+        "x": 930,
+        "y": 4660,
+        "wires": []
+    },
+    {
+        "id": "sec_floatingpoint",
+        "type": "comment",
+        "z": "write_single_tab",
+        "name": "FloatingPoint",
+        "info": "DB_FloatingPoint",
+        "x": 150,
+        "y": 4780,
+        "wires": []
+    },
+    {
+        "id": "wr_floatingpoint_real_write",
+        "type": "s7-plus write",
+        "z": "write_single_tab",
+        "name": "Real_write",
+        "endpoint": "example_plc_ep",
+        "symbols": [
+            {
+                "name": "DB_FloatingPoint.Real_write",
+                "address": "DB_FloatingPoint.Real_write",
+                "datatype": "Real"
+            }
+        ],
+        "outputFormat": "object",
+        "x": 590,
+        "y": 4820,
+        "wires": [
+            [
+                "db_floatingpoint_real_write"
+            ]
+        ]
+    },
+    {
+        "id": "db_floatingpoint_real_write",
+        "type": "debug",
+        "z": "write_single_tab",
+        "name": "Real result",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "false",
+        "statusVal": "payload[\"DB_FloatingPoint.Real_write\"].value",
+        "statusType": "msg",
+        "x": 930,
+        "y": 4820,
+        "wires": []
+    },
+    {
+        "id": "inj_floatingpoint_real_minneg_n3d402823e38",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "Real_MinNeg_n3d402823e38",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "-3.402823E+38",
+        "payloadType": "num",
+        "x": 200,
+        "y": 4820,
+        "wires": [
+            [
+                "wr_floatingpoint_real_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_floatingpoint_real_maxneg_n1d175495en38",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "Real_MaxNeg_n1d175495en38",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "-1.175495E-38",
+        "payloadType": "num",
+        "x": 210,
+        "y": 4860,
+        "wires": [
+            [
+                "wr_floatingpoint_real_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_floatingpoint_real_minpos_1d175495en38",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "Real_MinPos_1d175495en38",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "1.175495E-38",
+        "payloadType": "num",
+        "x": 200,
+        "y": 4900,
+        "wires": [
+            [
+                "wr_floatingpoint_real_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_floatingpoint_real_maxpos_3d402823e38",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "Real_MaxPos_3d402823e38",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "3.402823E+38",
+        "payloadType": "num",
+        "x": 200,
+        "y": 4940,
+        "wires": [
+            [
+                "wr_floatingpoint_real_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_floatingpoint_real_0d0",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "Real_0d0",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "0",
+        "payloadType": "num",
+        "x": 140,
+        "y": 4980,
+        "wires": [
+            [
+                "wr_floatingpoint_real_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_floatingpoint_real_987d125",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "Real_987d125",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "987.125",
+        "payloadType": "num",
+        "x": 160,
+        "y": 5020,
+        "wires": [
+            [
+                "wr_floatingpoint_real_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_floatingpoint_real_n123d5",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "Real_n123d5",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "-123.5",
+        "payloadType": "num",
+        "x": 150,
+        "y": 5060,
+        "wires": [
+            [
+                "wr_floatingpoint_real_write"
+            ]
+        ]
+    },
+    {
+        "id": "trg_floatingpoint_real_write",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "Read Real_write",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 160,
+        "y": 5140,
+        "wires": [
+            [
+                "rd_floatingpoint_real_write"
+            ]
+        ]
+    },
+    {
+        "id": "rd_floatingpoint_real_write",
+        "type": "s7-plus read",
+        "z": "write_single_tab",
+        "name": "Real_write",
+        "endpoint": "example_plc_ep",
+        "symbols": [
+            {
+                "name": "DB_FloatingPoint.Real_write",
+                "address": "DB_FloatingPoint.Real_write",
+                "datatype": "Real"
+            }
+        ],
+        "outputFormat": "object",
+        "x": 590,
+        "y": 5140,
+        "wires": [
+            [
+                "dbr_floatingpoint_real_write"
+            ]
+        ]
+    },
+    {
+        "id": "dbr_floatingpoint_real_write",
+        "type": "debug",
+        "z": "write_single_tab",
+        "name": "Real read",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "false",
+        "statusVal": "payload[\"DB_FloatingPoint.Real_write\"].value",
+        "statusType": "msg",
+        "x": 920,
+        "y": 5140,
+        "wires": []
+    },
+    {
+        "id": "wr_floatingpoint_lreal_write",
+        "type": "s7-plus write",
+        "z": "write_single_tab",
+        "name": "LReal_write",
+        "endpoint": "example_plc_ep",
+        "symbols": [
+            {
+                "name": "DB_FloatingPoint.LReal_write",
+                "address": "DB_FloatingPoint.LReal_write",
+                "datatype": "LReal"
+            }
+        ],
+        "outputFormat": "object",
+        "x": 590,
+        "y": 5220,
+        "wires": [
+            [
+                "db_floatingpoint_lreal_write"
+            ]
+        ]
+    },
+    {
+        "id": "db_floatingpoint_lreal_write",
+        "type": "debug",
+        "z": "write_single_tab",
+        "name": "LReal result",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "false",
+        "statusVal": "payload[\"DB_FloatingPoint.LReal_write\"].value",
+        "statusType": "msg",
+        "x": 930,
+        "y": 5220,
+        "wires": []
+    },
+    {
+        "id": "inj_floatingpoint_lreal_minneg_n1d7976931348623157e308",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "LReal_MinNeg_n1d7976931348623157e308",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "-1.7976931348623157E+308",
+        "payloadType": "num",
+        "x": 250,
+        "y": 5220,
+        "wires": [
+            [
+                "wr_floatingpoint_lreal_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_floatingpoint_lreal_maxneg_n2d2250738585072014en308",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "LReal_MaxNeg_n2d2250738585072014en308",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "-2.2250738585072014E-308",
+        "payloadType": "num",
+        "x": 260,
+        "y": 5260,
+        "wires": [
+            [
+                "wr_floatingpoint_lreal_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_floatingpoint_lreal_minpos_2d2250738585072014en308",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "LReal_MinPos_2d2250738585072014en308",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "2.2250738585072014E-308",
+        "payloadType": "num",
+        "x": 250,
+        "y": 5300,
+        "wires": [
+            [
+                "wr_floatingpoint_lreal_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_floatingpoint_lreal_maxpos_1d7976931348623157e308",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "LReal_MaxPos_1d7976931348623157e308",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "1.7976931348623157E+308",
+        "payloadType": "num",
+        "x": 250,
+        "y": 5340,
+        "wires": [
+            [
+                "wr_floatingpoint_lreal_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_floatingpoint_lreal_0d0",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "LReal_0d0",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "0",
+        "payloadType": "num",
+        "x": 140,
+        "y": 5380,
+        "wires": [
+            [
+                "wr_floatingpoint_lreal_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_floatingpoint_lreal_987d125",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "LReal_987d125",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "987.125",
+        "payloadType": "num",
+        "x": 160,
+        "y": 5420,
+        "wires": [
+            [
+                "wr_floatingpoint_lreal_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_floatingpoint_lreal_n123d5",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "LReal_n123d5",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "-123.5",
+        "payloadType": "num",
+        "x": 160,
+        "y": 5460,
+        "wires": [
+            [
+                "wr_floatingpoint_lreal_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_floatingpoint_lreal_1d23456789012346e18",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "LReal_1d23456789012346e18",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "1.23456789012346E+18",
+        "payloadType": "num",
+        "x": 210,
+        "y": 5500,
+        "wires": [
+            [
+                "wr_floatingpoint_lreal_write"
+            ]
+        ]
+    },
+    {
+        "id": "trg_floatingpoint_lreal_write",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "Read LReal_write",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 170,
+        "y": 5580,
+        "wires": [
+            [
+                "rd_floatingpoint_lreal_write"
+            ]
+        ]
+    },
+    {
+        "id": "rd_floatingpoint_lreal_write",
+        "type": "s7-plus read",
+        "z": "write_single_tab",
+        "name": "LReal_write",
+        "endpoint": "example_plc_ep",
+        "symbols": [
+            {
+                "name": "DB_FloatingPoint.LReal_write",
+                "address": "DB_FloatingPoint.LReal_write",
+                "datatype": "LReal"
+            }
+        ],
+        "outputFormat": "object",
+        "x": 590,
+        "y": 5580,
+        "wires": [
+            [
+                "dbr_floatingpoint_lreal_write"
+            ]
+        ]
+    },
+    {
+        "id": "dbr_floatingpoint_lreal_write",
+        "type": "debug",
+        "z": "write_single_tab",
+        "name": "LReal read",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "false",
+        "statusVal": "payload[\"DB_FloatingPoint.LReal_write\"].value",
+        "statusType": "msg",
+        "x": 930,
+        "y": 5580,
+        "wires": []
+    },
+    {
+        "id": "sec_dateandtime",
+        "type": "comment",
+        "z": "write_single_tab",
+        "name": "DateAndTime",
+        "info": "DB_DateAndTime",
+        "x": 150,
+        "y": 5700,
+        "wires": []
+    },
+    {
+        "id": "wr_dateandtime_date_write",
+        "type": "s7-plus write",
+        "z": "write_single_tab",
+        "name": "Date_write",
+        "endpoint": "example_plc_ep",
+        "symbols": [
+            {
+                "name": "DB_DateAndTime.Date_write",
+                "address": "DB_DateAndTime.Date_write",
+                "datatype": "Date"
+            }
+        ],
+        "outputFormat": "object",
+        "x": 590,
+        "y": 5740,
+        "wires": [
+            [
+                "db_dateandtime_date_write"
+            ]
+        ]
+    },
+    {
+        "id": "db_dateandtime_date_write",
+        "type": "debug",
+        "z": "write_single_tab",
+        "name": "Date result",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "false",
+        "statusVal": "payload[\"DB_DateAndTime.Date_write\"].value",
+        "statusType": "msg",
+        "x": 930,
+        "y": 5740,
+        "wires": []
+    },
+    {
+        "id": "inj_dateandtime_date_min_1990_01_01",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "Date_Min_1990_01_01",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "1990-01-01T00:00:00.000Z",
+        "payloadType": "str",
+        "x": 180,
+        "y": 5740,
+        "wires": [
+            [
+                "wr_dateandtime_date_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_dateandtime_date_max_2169_06_06",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "Date_Max_2169_06_06",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "2169-06-06T00:00:00.000Z",
+        "payloadType": "str",
+        "x": 180,
+        "y": 5780,
+        "wires": [
+            [
+                "wr_dateandtime_date_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_dateandtime_date_2023_10_28",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "Date_2023_10_28",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "2023-10-28T00:00:00.000Z",
+        "payloadType": "str",
+        "x": 170,
+        "y": 5820,
+        "wires": [
+            [
+                "wr_dateandtime_date_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_dateandtime_date_1990_02_03",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "Date_1990_02_03",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "1990-02-03T00:00:00.000Z",
+        "payloadType": "str",
+        "x": 170,
+        "y": 5860,
+        "wires": [
+            [
+                "wr_dateandtime_date_write"
+            ]
+        ]
+    },
+    {
+        "id": "trg_dateandtime_date_write",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "Read Date_write",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 160,
+        "y": 5940,
+        "wires": [
+            [
+                "rd_dateandtime_date_write"
+            ]
+        ]
+    },
+    {
+        "id": "rd_dateandtime_date_write",
+        "type": "s7-plus read",
+        "z": "write_single_tab",
+        "name": "Date_write",
+        "endpoint": "example_plc_ep",
+        "symbols": [
+            {
+                "name": "DB_DateAndTime.Date_write",
+                "address": "DB_DateAndTime.Date_write",
+                "datatype": "Date"
+            }
+        ],
+        "outputFormat": "object",
+        "x": 590,
+        "y": 5940,
+        "wires": [
+            [
+                "dbr_dateandtime_date_write"
+            ]
+        ]
+    },
+    {
+        "id": "dbr_dateandtime_date_write",
+        "type": "debug",
+        "z": "write_single_tab",
+        "name": "Date read",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "false",
+        "statusVal": "payload[\"DB_DateAndTime.Date_write\"].value",
+        "statusType": "msg",
+        "x": 920,
+        "y": 5940,
+        "wires": []
+    },
+    {
+        "id": "wr_dateandtime_time_of_day_write",
+        "type": "s7-plus write",
+        "z": "write_single_tab",
+        "name": "Time_Of_Day_write",
+        "endpoint": "example_plc_ep",
+        "symbols": [
+            {
+                "name": "DB_DateAndTime.Time_Of_Day_write",
+                "address": "DB_DateAndTime.Time_Of_Day_write",
+                "datatype": "TimeOfDay"
+            }
+        ],
+        "outputFormat": "object",
+        "x": 620,
+        "y": 6020,
+        "wires": [
+            [
+                "db_dateandtime_time_of_day_write"
+            ]
+        ]
+    },
+    {
+        "id": "db_dateandtime_time_of_day_write",
+        "type": "debug",
+        "z": "write_single_tab",
+        "name": "TimeOfDay result",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "false",
+        "statusVal": "payload[\"DB_DateAndTime.Time_Of_Day_write\"].value",
+        "statusType": "msg",
+        "x": 950,
+        "y": 6020,
+        "wires": []
+    },
+    {
+        "id": "inj_dateandtime_time_of_day_min_00_00_00d000",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "Time_Of_Day_Min_00_00_00d000",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "0",
+        "payloadType": "num",
+        "x": 220,
+        "y": 6020,
+        "wires": [
+            [
+                "wr_dateandtime_time_of_day_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_dateandtime_time_of_day_max_23_59_59d999",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "Time_Of_Day_Max_23_59_59d999",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "86399999",
+        "payloadType": "num",
+        "x": 220,
+        "y": 6060,
+        "wires": [
+            [
+                "wr_dateandtime_time_of_day_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_dateandtime_time_of_day_01_02_03",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "Time_Of_Day_01_02_03",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "3723000",
+        "payloadType": "num",
+        "x": 190,
+        "y": 6100,
+        "wires": [
+            [
+                "wr_dateandtime_time_of_day_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_dateandtime_time_of_day_23_58_59",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "Time_Of_Day_23_58_59",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "86339000",
+        "payloadType": "num",
+        "x": 190,
+        "y": 6140,
+        "wires": [
+            [
+                "wr_dateandtime_time_of_day_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_dateandtime_time_of_day_12_13_14d123",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "Time_Of_Day_12_13_14d123",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "43994123",
+        "payloadType": "num",
+        "x": 200,
+        "y": 6180,
+        "wires": [
+            [
+                "wr_dateandtime_time_of_day_write"
+            ]
+        ]
+    },
+    {
+        "id": "trg_dateandtime_time_of_day_write",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "Read Time_Of_Day_write",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 190,
+        "y": 6260,
+        "wires": [
+            [
+                "rd_dateandtime_time_of_day_write"
+            ]
+        ]
+    },
+    {
+        "id": "rd_dateandtime_time_of_day_write",
+        "type": "s7-plus read",
+        "z": "write_single_tab",
+        "name": "Time_Of_Day_write",
+        "endpoint": "example_plc_ep",
+        "symbols": [
+            {
+                "name": "DB_DateAndTime.Time_Of_Day_write",
+                "address": "DB_DateAndTime.Time_Of_Day_write",
+                "datatype": "TimeOfDay"
+            }
+        ],
+        "outputFormat": "object",
+        "x": 620,
+        "y": 6260,
+        "wires": [
+            [
+                "dbr_dateandtime_time_of_day_write"
+            ]
+        ]
+    },
+    {
+        "id": "dbr_dateandtime_time_of_day_write",
+        "type": "debug",
+        "z": "write_single_tab",
+        "name": "TimeOfDay read",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "false",
+        "statusVal": "payload[\"DB_DateAndTime.Time_Of_Day_write\"].value",
+        "statusType": "msg",
+        "x": 940,
+        "y": 6260,
+        "wires": []
+    },
+    {
+        "id": "wr_dateandtime_date_and_time_write",
+        "type": "s7-plus write",
+        "z": "write_single_tab",
+        "name": "Date_And_Time_write",
+        "endpoint": "example_plc_ep",
+        "symbols": [
+            {
+                "name": "DB_DateAndTime.Date_And_Time_write",
+                "address": "DB_DateAndTime.Date_And_Time_write",
+                "datatype": "DateAndTime"
+            }
+        ],
+        "outputFormat": "object",
+        "x": 620,
+        "y": 6340,
+        "wires": [
+            [
+                "db_dateandtime_date_and_time_write"
+            ]
+        ]
+    },
+    {
+        "id": "db_dateandtime_date_and_time_write",
+        "type": "debug",
+        "z": "write_single_tab",
+        "name": "DateAndTime result",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "false",
+        "statusVal": "payload[\"DB_DateAndTime.Date_And_Time_write\"].value",
+        "statusType": "msg",
+        "x": 960,
+        "y": 6340,
+        "wires": []
+    },
+    {
+        "id": "inj_dateandtime_date_and_time_min_1990_01_01_00_00_00",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "Date_And_Time_Min_1990_01_01_00_00_00",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "1990-01-01T00:00:00.000Z",
+        "payloadType": "str",
+        "x": 250,
+        "y": 6340,
+        "wires": [
+            [
+                "wr_dateandtime_date_and_time_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_dateandtime_date_and_time_max_2089_12_31_23_59_59d999",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "Date_And_Time_Max_2089_12_31_23_59_59d999",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "2089-12-31T23:59:59.999Z",
+        "payloadType": "str",
+        "x": 270,
+        "y": 6380,
+        "wires": [
+            [
+                "wr_dateandtime_date_and_time_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_dateandtime_date_and_time_2023_10_28_23_58_59d123",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "Date_And_Time_2023_10_28_23_58_59d123",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "2023-10-28T23:58:59.123Z",
+        "payloadType": "str",
+        "x": 250,
+        "y": 6420,
+        "wires": [
+            [
+                "wr_dateandtime_date_and_time_write"
+            ]
+        ]
+    },
+    {
+        "id": "trg_dateandtime_date_and_time_write",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "Read Date_And_Time_write",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 200,
+        "y": 6500,
+        "wires": [
+            [
+                "rd_dateandtime_date_and_time_write"
+            ]
+        ]
+    },
+    {
+        "id": "rd_dateandtime_date_and_time_write",
+        "type": "s7-plus read",
+        "z": "write_single_tab",
+        "name": "Date_And_Time_write",
+        "endpoint": "example_plc_ep",
+        "symbols": [
+            {
+                "name": "DB_DateAndTime.Date_And_Time_write",
+                "address": "DB_DateAndTime.Date_And_Time_write",
+                "datatype": "DateAndTime"
+            }
+        ],
+        "outputFormat": "object",
+        "x": 620,
+        "y": 6500,
+        "wires": [
+            [
+                "dbr_dateandtime_date_and_time_write"
+            ]
+        ]
+    },
+    {
+        "id": "dbr_dateandtime_date_and_time_write",
+        "type": "debug",
+        "z": "write_single_tab",
+        "name": "DateAndTime read",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "false",
+        "statusVal": "payload[\"DB_DateAndTime.Date_And_Time_write\"].value",
+        "statusType": "msg",
+        "x": 950,
+        "y": 6500,
+        "wires": []
+    },
+    {
+        "id": "wr_dateandtime_ltod_write",
+        "type": "s7-plus write",
+        "z": "write_single_tab",
+        "name": "LTOD_write",
+        "endpoint": "example_plc_ep",
+        "symbols": [
+            {
+                "name": "DB_DateAndTime.LTOD_write",
+                "address": "DB_DateAndTime.LTOD_write",
+                "datatype": "LTod"
+            }
+        ],
+        "outputFormat": "object",
+        "x": 590,
+        "y": 6580,
+        "wires": [
+            [
+                "db_dateandtime_ltod_write"
+            ]
+        ]
+    },
+    {
+        "id": "db_dateandtime_ltod_write",
+        "type": "debug",
+        "z": "write_single_tab",
+        "name": "LTod result",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "false",
+        "statusVal": "payload[\"DB_DateAndTime.LTOD_write\"].value",
+        "statusType": "msg",
+        "x": 930,
+        "y": 6580,
+        "wires": []
+    },
+    {
+        "id": "inj_dateandtime_ltod_min_00_00_00d000000000",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "LTOD_Min_00_00_00d000000000",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "0",
+        "payloadType": "str",
+        "x": 220,
+        "y": 6580,
+        "wires": [
+            [
+                "wr_dateandtime_ltod_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_dateandtime_ltod_max_23_59_59d999999999",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "LTOD_Max_23_59_59d999999999",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "86399999999999",
+        "payloadType": "str",
+        "x": 220,
+        "y": 6620,
+        "wires": [
+            [
+                "wr_dateandtime_ltod_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_dateandtime_ltod_10_20_30d400365215",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "LTOD_10_20_30d400365215",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "37230400365215",
+        "payloadType": "str",
+        "x": 200,
+        "y": 6660,
+        "wires": [
+            [
+                "wr_dateandtime_ltod_write"
+            ]
+        ]
+    },
+    {
+        "id": "trg_dateandtime_ltod_write",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "Read LTOD_write",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 170,
+        "y": 6740,
+        "wires": [
+            [
+                "rd_dateandtime_ltod_write"
+            ]
+        ]
+    },
+    {
+        "id": "rd_dateandtime_ltod_write",
+        "type": "s7-plus read",
+        "z": "write_single_tab",
+        "name": "LTOD_write",
+        "endpoint": "example_plc_ep",
+        "symbols": [
+            {
+                "name": "DB_DateAndTime.LTOD_write",
+                "address": "DB_DateAndTime.LTOD_write",
+                "datatype": "LTod"
+            }
+        ],
+        "outputFormat": "object",
+        "x": 590,
+        "y": 6740,
+        "wires": [
+            [
+                "dbr_dateandtime_ltod_write"
+            ]
+        ]
+    },
+    {
+        "id": "dbr_dateandtime_ltod_write",
+        "type": "debug",
+        "z": "write_single_tab",
+        "name": "LTod read",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "false",
+        "statusVal": "payload[\"DB_DateAndTime.LTOD_write\"].value",
+        "statusType": "msg",
+        "x": 930,
+        "y": 6740,
+        "wires": []
+    },
+    {
+        "id": "wr_dateandtime_ldt_write",
+        "type": "s7-plus write",
+        "z": "write_single_tab",
+        "name": "LDT_write",
+        "endpoint": "example_plc_ep",
+        "symbols": [
+            {
+                "name": "DB_DateAndTime.LDT_write",
+                "address": "DB_DateAndTime.LDT_write",
+                "datatype": "Ldt"
+            }
+        ],
+        "outputFormat": "object",
+        "x": 590,
+        "y": 6820,
+        "wires": [
+            [
+                "db_dateandtime_ldt_write"
+            ]
+        ]
+    },
+    {
+        "id": "db_dateandtime_ldt_write",
+        "type": "debug",
+        "z": "write_single_tab",
+        "name": "Ldt result",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "false",
+        "statusVal": "payload[\"DB_DateAndTime.LDT_write\"].value",
+        "statusType": "msg",
+        "x": 920,
+        "y": 6820,
+        "wires": []
+    },
+    {
+        "id": "inj_dateandtime_ldt_min_1970_01_01_00_00_00d000000000",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "LDT_Min_1970_01_01_00_00_00d000000000",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "1970-01-01T00:00:00.000Z",
+        "payloadType": "str",
+        "x": 250,
+        "y": 6820,
+        "wires": [
+            [
+                "wr_dateandtime_ldt_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_dateandtime_ldt_max_2262_04_11_23_47_16d854775807",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "LDT_Max_2262_04_11_23_47_16d854775807",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "2262-04-11T23:47:16.854Z",
+        "payloadType": "str",
+        "x": 260,
+        "y": 6860,
+        "wires": [
+            [
+                "wr_dateandtime_ldt_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_dateandtime_ldt_2008_10_25_08_12_34d567",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "LDT_2008_10_25_08_12_34d567",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "2008-10-25T08:12:34.567Z",
+        "payloadType": "str",
+        "x": 220,
+        "y": 6900,
+        "wires": [
+            [
+                "wr_dateandtime_ldt_write"
+            ]
+        ]
+    },
+    {
+        "id": "trg_dateandtime_ldt_write",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "Read LDT_write",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 160,
+        "y": 6980,
+        "wires": [
+            [
+                "rd_dateandtime_ldt_write"
+            ]
+        ]
+    },
+    {
+        "id": "rd_dateandtime_ldt_write",
+        "type": "s7-plus read",
+        "z": "write_single_tab",
+        "name": "LDT_write",
+        "endpoint": "example_plc_ep",
+        "symbols": [
+            {
+                "name": "DB_DateAndTime.LDT_write",
+                "address": "DB_DateAndTime.LDT_write",
+                "datatype": "Ldt"
+            }
+        ],
+        "outputFormat": "object",
+        "x": 590,
+        "y": 6980,
+        "wires": [
+            [
+                "dbr_dateandtime_ldt_write"
+            ]
+        ]
+    },
+    {
+        "id": "dbr_dateandtime_ldt_write",
+        "type": "debug",
+        "z": "write_single_tab",
+        "name": "Ldt read",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "false",
+        "statusVal": "payload[\"DB_DateAndTime.LDT_write\"].value",
+        "statusType": "msg",
+        "x": 920,
+        "y": 6980,
+        "wires": []
+    },
+    {
+        "id": "wr_dateandtime_dtl_write",
+        "type": "s7-plus write",
+        "z": "write_single_tab",
+        "name": "DTL_write",
+        "endpoint": "example_plc_ep",
+        "symbols": [
+            {
+                "name": "DB_DateAndTime.DTL_write",
+                "address": "DB_DateAndTime.DTL_write",
+                "datatype": "Dtl"
+            }
+        ],
+        "outputFormat": "object",
+        "x": 590,
+        "y": 7060,
+        "wires": [
+            [
+                "db_dateandtime_dtl_write"
+            ]
+        ]
+    },
+    {
+        "id": "db_dateandtime_dtl_write",
+        "type": "debug",
+        "z": "write_single_tab",
+        "name": "Dtl result",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "false",
+        "statusVal": "payload[\"DB_DateAndTime.DTL_write\"].value",
+        "statusType": "msg",
+        "x": 920,
+        "y": 7060,
+        "wires": []
+    },
+    {
+        "id": "inj_dateandtime_dtl_min_1970_01_01_00_00_00d000000000",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "DTL_Min_1970_01_01_00_00_00d000000000",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "1970-01-01T00:00:00.000Z",
+        "payloadType": "str",
+        "x": 250,
+        "y": 7060,
+        "wires": [
+            [
+                "wr_dateandtime_dtl_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_dateandtime_dtl_max_2262_04_11_23_47_16d854775807",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "DTL_Max_2262_04_11_23_47_16d854775807",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "2262-04-11T23:47:16.854Z",
+        "payloadType": "str",
+        "x": 260,
+        "y": 7100,
+        "wires": [
+            [
+                "wr_dateandtime_dtl_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_dateandtime_dtl_2008_10_25_08_12_34d567",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "DTL_2008_10_25_08_12_34d567",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "2008-10-25T08:12:34.567Z",
+        "payloadType": "str",
+        "x": 220,
+        "y": 7140,
+        "wires": [
+            [
+                "wr_dateandtime_dtl_write"
+            ]
+        ]
+    },
+    {
+        "id": "trg_dateandtime_dtl_write",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "Read DTL_write",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 160,
+        "y": 7220,
+        "wires": [
+            [
+                "rd_dateandtime_dtl_write"
+            ]
+        ]
+    },
+    {
+        "id": "rd_dateandtime_dtl_write",
+        "type": "s7-plus read",
+        "z": "write_single_tab",
+        "name": "DTL_write",
+        "endpoint": "example_plc_ep",
+        "symbols": [
+            {
+                "name": "DB_DateAndTime.DTL_write",
+                "address": "DB_DateAndTime.DTL_write",
+                "datatype": "Dtl"
+            }
+        ],
+        "outputFormat": "object",
+        "x": 590,
+        "y": 7220,
+        "wires": [
+            [
+                "dbr_dateandtime_dtl_write"
+            ]
+        ]
+    },
+    {
+        "id": "dbr_dateandtime_dtl_write",
+        "type": "debug",
+        "z": "write_single_tab",
+        "name": "Dtl read",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "false",
+        "statusVal": "payload[\"DB_DateAndTime.DTL_write\"].value",
+        "statusType": "msg",
+        "x": 920,
+        "y": 7220,
+        "wires": []
+    },
+    {
+        "id": "sec_timers",
+        "type": "comment",
+        "z": "write_single_tab",
+        "name": "Timers",
+        "info": "DB_Timers",
+        "x": 130,
+        "y": 7340,
+        "wires": []
+    },
+    {
+        "id": "wr_timers_time_write",
+        "type": "s7-plus write",
+        "z": "write_single_tab",
+        "name": "Time_write",
+        "endpoint": "example_plc_ep",
+        "symbols": [
+            {
+                "name": "DB_Timers.Time_write",
+                "address": "DB_Timers.Time_write",
+                "datatype": "Time"
+            }
+        ],
+        "outputFormat": "object",
+        "x": 590,
+        "y": 7380,
+        "wires": [
+            [
+                "db_timers_time_write"
+            ]
+        ]
+    },
+    {
+        "id": "db_timers_time_write",
+        "type": "debug",
+        "z": "write_single_tab",
+        "name": "Time result",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "false",
+        "statusVal": "payload[\"DB_Timers.Time_write\"].value",
+        "statusType": "msg",
+        "x": 930,
+        "y": 7380,
+        "wires": []
+    },
+    {
+        "id": "inj_timers_time_min_n24d_20h_31m_23s_648ms",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "Time_Min_n24D_20H_31M_23S_648MS",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "-2147483648",
+        "payloadType": "num",
+        "x": 240,
+        "y": 7380,
+        "wires": [
+            [
+                "wr_timers_time_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_timers_time_max_24d_20h_31m_23s_647ms",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "Time_Max_24D_20H_31M_23S_647MS",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "2147483647",
+        "payloadType": "num",
+        "x": 240,
+        "y": 7420,
+        "wires": [
+            [
+                "wr_timers_time_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_timers_time_12s_345ms",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "Time_12S_345MS",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "12345",
+        "payloadType": "num",
+        "x": 170,
+        "y": 7460,
+        "wires": [
+            [
+                "wr_timers_time_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_timers_time_n20m_34s",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "Time_n20M_34S",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "-1234000",
+        "payloadType": "num",
+        "x": 160,
+        "y": 7500,
+        "wires": [
+            [
+                "wr_timers_time_write"
+            ]
+        ]
+    },
+    {
+        "id": "trg_timers_time_write",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "Read Time_write",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 160,
+        "y": 7580,
+        "wires": [
+            [
+                "rd_timers_time_write"
+            ]
+        ]
+    },
+    {
+        "id": "rd_timers_time_write",
+        "type": "s7-plus read",
+        "z": "write_single_tab",
+        "name": "Time_write",
+        "endpoint": "example_plc_ep",
+        "symbols": [
+            {
+                "name": "DB_Timers.Time_write",
+                "address": "DB_Timers.Time_write",
+                "datatype": "Time"
+            }
+        ],
+        "outputFormat": "object",
+        "x": 590,
+        "y": 7580,
+        "wires": [
+            [
+                "dbr_timers_time_write"
+            ]
+        ]
+    },
+    {
+        "id": "dbr_timers_time_write",
+        "type": "debug",
+        "z": "write_single_tab",
+        "name": "Time read",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "false",
+        "statusVal": "payload[\"DB_Timers.Time_write\"].value",
+        "statusType": "msg",
+        "x": 920,
+        "y": 7580,
+        "wires": []
+    },
+    {
+        "id": "wr_timers_s5time_write",
+        "type": "s7-plus write",
+        "z": "write_single_tab",
+        "name": "S5Time_write",
+        "endpoint": "example_plc_ep",
+        "symbols": [
+            {
+                "name": "DB_Timers.S5Time_write",
+                "address": "DB_Timers.S5Time_write",
+                "datatype": "S5Time"
+            }
+        ],
+        "outputFormat": "object",
+        "x": 600,
+        "y": 7660,
+        "wires": [
+            [
+                "db_timers_s5time_write"
+            ]
+        ]
+    },
+    {
+        "id": "db_timers_s5time_write",
+        "type": "debug",
+        "z": "write_single_tab",
+        "name": "S5Time result",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "false",
+        "statusVal": "payload[\"DB_Timers.S5Time_write\"].value",
+        "statusType": "msg",
+        "x": 940,
+        "y": 7660,
+        "wires": []
+    },
+    {
+        "id": "inj_timers_s5time_min_0ms",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "S5Time_Min_0MS",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "0",
+        "payloadType": "num",
+        "x": 170,
+        "y": 7660,
+        "wires": [
+            [
+                "wr_timers_s5time_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_timers_s5time_max_2h46m30s",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "S5Time_Max_2H46M30S",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "9990000",
+        "payloadType": "num",
+        "x": 190,
+        "y": 7700,
+        "wires": [
+            [
+                "wr_timers_s5time_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_timers_s5time_120ms",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "S5Time_120MS",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "120",
+        "payloadType": "num",
+        "x": 160,
+        "y": 7740,
+        "wires": [
+            [
+                "wr_timers_s5time_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_timers_s5time_12s300ms",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "S5Time_12S300MS",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "12300",
+        "payloadType": "num",
+        "x": 170,
+        "y": 7780,
+        "wires": [
+            [
+                "wr_timers_s5time_write"
+            ]
+        ]
+    },
+    {
+        "id": "trg_timers_s5time_write",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "Read S5Time_write",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 170,
+        "y": 7860,
+        "wires": [
+            [
+                "rd_timers_s5time_write"
+            ]
+        ]
+    },
+    {
+        "id": "rd_timers_s5time_write",
+        "type": "s7-plus read",
+        "z": "write_single_tab",
+        "name": "S5Time_write",
+        "endpoint": "example_plc_ep",
+        "symbols": [
+            {
+                "name": "DB_Timers.S5Time_write",
+                "address": "DB_Timers.S5Time_write",
+                "datatype": "S5Time"
+            }
+        ],
+        "outputFormat": "object",
+        "x": 600,
+        "y": 7860,
+        "wires": [
+            [
+                "dbr_timers_s5time_write"
+            ]
+        ]
+    },
+    {
+        "id": "dbr_timers_s5time_write",
+        "type": "debug",
+        "z": "write_single_tab",
+        "name": "S5Time read",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "false",
+        "statusVal": "payload[\"DB_Timers.S5Time_write\"].value",
+        "statusType": "msg",
+        "x": 930,
+        "y": 7860,
+        "wires": []
+    },
+    {
+        "id": "wr_timers_ltime_write",
+        "type": "s7-plus write",
+        "z": "write_single_tab",
+        "name": "LTime_write",
+        "endpoint": "example_plc_ep",
+        "symbols": [
+            {
+                "name": "DB_Timers.LTime_write",
+                "address": "DB_Timers.LTime_write",
+                "datatype": "LTime"
+            }
+        ],
+        "outputFormat": "object",
+        "x": 590,
+        "y": 7940,
+        "wires": [
+            [
+                "db_timers_ltime_write"
+            ]
+        ]
+    },
+    {
+        "id": "db_timers_ltime_write",
+        "type": "debug",
+        "z": "write_single_tab",
+        "name": "LTime result",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "false",
+        "statusVal": "payload[\"DB_Timers.LTime_write\"].value",
+        "statusType": "msg",
+        "x": 930,
+        "y": 7940,
+        "wires": []
+    },
+    {
+        "id": "inj_timers_ltime_min_n106751d_23h_47m_16s_854ms_775us_808ns",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "LTime_Min_n106751D_23H_47M_16S_854MS_775US_808NS",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "-9223372036854775808",
+        "payloadType": "str",
+        "x": 310,
+        "y": 7940,
+        "wires": [
+            [
+                "wr_timers_ltime_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_timers_ltime_max_106751d_23h_47m_16s_854ms_775us_807ns",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "LTime_Max_106751D_23H_47M_16S_854MS_775US_807NS",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "9223372036854775807",
+        "payloadType": "str",
+        "x": 310,
+        "y": 7980,
+        "wires": [
+            [
+                "wr_timers_ltime_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_timers_ltime_12s345ns",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "LTime_12S345NS",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "12000000345",
+        "payloadType": "str",
+        "x": 170,
+        "y": 8020,
+        "wires": [
+            [
+                "wr_timers_ltime_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_timers_ltime_n12h_345us",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "LTime_n12H_345US",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "-43200000345000",
+        "payloadType": "str",
+        "x": 180,
+        "y": 8060,
+        "wires": [
+            [
+                "wr_timers_ltime_write"
+            ]
+        ]
+    },
+    {
+        "id": "inj_timers_ltime_23h_456us",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "LTime_23H_456US",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "82800000456000",
+        "payloadType": "str",
+        "x": 170,
+        "y": 8100,
+        "wires": [
+            [
+                "wr_timers_ltime_write"
+            ]
+        ]
+    },
+    {
+        "id": "trg_timers_ltime_write",
+        "type": "inject",
+        "z": "write_single_tab",
+        "name": "Read LTime_write",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 170,
+        "y": 8180,
+        "wires": [
+            [
+                "rd_timers_ltime_write"
+            ]
+        ]
+    },
+    {
+        "id": "rd_timers_ltime_write",
+        "type": "s7-plus read",
+        "z": "write_single_tab",
+        "name": "LTime_write",
+        "endpoint": "example_plc_ep",
+        "symbols": [
+            {
+                "name": "DB_Timers.LTime_write",
+                "address": "DB_Timers.LTime_write",
+                "datatype": "LTime"
+            }
+        ],
+        "outputFormat": "object",
+        "x": 590,
+        "y": 8180,
+        "wires": [
+            [
+                "dbr_timers_ltime_write"
+            ]
+        ]
+    },
+    {
+        "id": "dbr_timers_ltime_write",
+        "type": "debug",
+        "z": "write_single_tab",
+        "name": "LTime read",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "false",
+        "statusVal": "payload[\"DB_Timers.LTime_write\"].value",
+        "statusType": "msg",
+        "x": 930,
+        "y": 8180,
+        "wires": []
+    },
+    {
+        "id": "example_plc_ep",
+        "type": "s7-plus endpoint",
+        "name": "PLC",
+        "address": "192.168.0.1",
+        "timeout": 10000
+    },
+    {
+        "id": "69768f9f5a51add5",
+        "type": "global-config",
+        "env": [],
+        "modules": {
+            "node-red-contrib-s7-plus": "0.0.1"
+        }
+    }
+]

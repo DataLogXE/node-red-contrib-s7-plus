@@ -1,0 +1,346 @@
+[
+    {
+        "id": "read_multi_tab",
+        "type": "tab",
+        "label": "Read Multiple Values",
+        "disabled": false,
+        "info": "Reads many symbols at once with a single s7-plus read node.\n\n1) \"Read all values\" triggers one read of one representative constant per scalar datatype in plc/s7-1500 plus a few selected sample symbols. The read node lists all symbols in its config, so a single request returns the whole payload object (keyed by symbol).\n\n2) \"Read selected symbols\" shows the dynamic variant: a function node sets msg.symbols (a string[] with the same symbols as block 1) at runtime and feeds an unconfigured read node.\n\nRegenerate with: node scripts/generate-read-multiple-flow.js"
+    },
+    {
+        "id": "rm_hdr",
+        "type": "comment",
+        "z": "read_multi_tab",
+        "name": "Read multiple values — one s7-plus read node, many symbols, one request",
+        "info": "",
+        "x": 360,
+        "y": 40,
+        "wires": []
+    },
+    {
+        "id": "rm_comment_all",
+        "type": "comment",
+        "z": "read_multi_tab",
+        "name": "1) Static config: all symbols listed in the read node",
+        "info": "",
+        "x": 250,
+        "y": 100,
+        "wires": []
+    },
+    {
+        "id": "rm_inject_all",
+        "type": "inject",
+        "z": "read_multi_tab",
+        "name": "Read all values",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 150,
+        "y": 160,
+        "wires": [
+            [
+                "rm_read_all"
+            ]
+        ]
+    },
+    {
+        "id": "rm_read_all",
+        "type": "s7-plus read",
+        "z": "read_multi_tab",
+        "name": "read all symbols",
+        "endpoint": "example_plc_ep",
+        "symbols": [
+            {
+                "name": "DB_FloatingPoint.Real_987d125",
+                "address": "DB_FloatingPoint.Real_987d125",
+                "datatype": "Real"
+            },
+            {
+                "name": "DB_FloatingPoint.LReal_987d125",
+                "address": "DB_FloatingPoint.LReal_987d125",
+                "datatype": "LReal"
+            },
+            {
+                "name": "DB_Integers.Int_12345",
+                "address": "DB_Integers.Int_12345",
+                "datatype": "Int"
+            },
+            {
+                "name": "DB_Binary.Bool_False",
+                "address": "DB_Binary.Bool_False",
+                "datatype": "Bool"
+            },
+            {
+                "name": "DB_BitStrings.Byte_Min_0x00",
+                "address": "DB_BitStrings.Byte_Min_0x00",
+                "datatype": "Byte"
+            },
+            {
+                "name": "DB_BitStrings.Word_Min_0x0000",
+                "address": "DB_BitStrings.Word_Min_0x0000",
+                "datatype": "Word"
+            },
+            {
+                "name": "DB_BitStrings.DWord_Min_0x00000000",
+                "address": "DB_BitStrings.DWord_Min_0x00000000",
+                "datatype": "DWord"
+            },
+            {
+                "name": "DB_BitStrings.LWord_Min_0x0000000000000000",
+                "address": "DB_BitStrings.LWord_Min_0x0000000000000000",
+                "datatype": "LWord"
+            },
+            {
+                "name": "DB_CharacterStrings.Char_Space",
+                "address": "DB_CharacterStrings.Char_Space",
+                "datatype": "Char"
+            },
+            {
+                "name": "DB_CharacterStrings.String_Empty",
+                "address": "DB_CharacterStrings.String_Empty",
+                "datatype": "String"
+            },
+            {
+                "name": "DB_CharacterStrings.WChar_Space",
+                "address": "DB_CharacterStrings.WChar_Space",
+                "datatype": "WChar"
+            },
+            {
+                "name": "DB_CharacterStrings.WString_Empty",
+                "address": "DB_CharacterStrings.WString_Empty",
+                "datatype": "WString"
+            },
+            {
+                "name": "DB_Integers.SInt_Min_n128",
+                "address": "DB_Integers.SInt_Min_n128",
+                "datatype": "SInt"
+            },
+            {
+                "name": "DB_Integers.Int_Min_n32768",
+                "address": "DB_Integers.Int_Min_n32768",
+                "datatype": "Int"
+            },
+            {
+                "name": "DB_Integers.DInt_Min_n2147483648",
+                "address": "DB_Integers.DInt_Min_n2147483648",
+                "datatype": "DInt"
+            },
+            {
+                "name": "DB_Integers.USint_Min_0",
+                "address": "DB_Integers.USint_Min_0",
+                "datatype": "USInt"
+            },
+            {
+                "name": "DB_Integers.UInt_Min_0",
+                "address": "DB_Integers.UInt_Min_0",
+                "datatype": "UInt"
+            },
+            {
+                "name": "DB_Integers.UDInt_Min_0",
+                "address": "DB_Integers.UDInt_Min_0",
+                "datatype": "UDInt"
+            },
+            {
+                "name": "DB_Integers.LInt_Min_n9223372036854775808",
+                "address": "DB_Integers.LInt_Min_n9223372036854775808",
+                "datatype": "LInt"
+            },
+            {
+                "name": "DB_Integers.ULInt_Min_0",
+                "address": "DB_Integers.ULInt_Min_0",
+                "datatype": "ULInt"
+            },
+            {
+                "name": "DB_FloatingPoint.Real_MinNeg_n3d402823e38",
+                "address": "DB_FloatingPoint.Real_MinNeg_n3d402823e38",
+                "datatype": "Real"
+            },
+            {
+                "name": "DB_FloatingPoint.LReal_MinNeg_n1d7976931348623157e308",
+                "address": "DB_FloatingPoint.LReal_MinNeg_n1d7976931348623157e308",
+                "datatype": "LReal"
+            },
+            {
+                "name": "DB_DateAndTime.Date_Min_1990_01_01",
+                "address": "DB_DateAndTime.Date_Min_1990_01_01",
+                "datatype": "Date"
+            },
+            {
+                "name": "DB_DateAndTime.Time_Of_Day_Min_00_00_00d000",
+                "address": "DB_DateAndTime.Time_Of_Day_Min_00_00_00d000",
+                "datatype": "TimeOfDay"
+            },
+            {
+                "name": "DB_DateAndTime.Date_And_Time_Min_1990_01_01_00_00_00",
+                "address": "DB_DateAndTime.Date_And_Time_Min_1990_01_01_00_00_00",
+                "datatype": "DateAndTime"
+            },
+            {
+                "name": "DB_DateAndTime.LTOD_Min_00_00_00d000000000",
+                "address": "DB_DateAndTime.LTOD_Min_00_00_00d000000000",
+                "datatype": "LTod"
+            },
+            {
+                "name": "DB_DateAndTime.LDT_Min_1970_01_01_00_00_00d000000000",
+                "address": "DB_DateAndTime.LDT_Min_1970_01_01_00_00_00d000000000",
+                "datatype": "Ldt"
+            },
+            {
+                "name": "DB_DateAndTime.DTL_Min_1970_01_01_00_00_00d000000000",
+                "address": "DB_DateAndTime.DTL_Min_1970_01_01_00_00_00d000000000",
+                "datatype": "Dtl"
+            },
+            {
+                "name": "DB_Timers.Time_Min_n24D_20H_31M_23S_648MS",
+                "address": "DB_Timers.Time_Min_n24D_20H_31M_23S_648MS",
+                "datatype": "Time"
+            },
+            {
+                "name": "DB_Timers.S5Time_Min_0MS",
+                "address": "DB_Timers.S5Time_Min_0MS",
+                "datatype": "S5Time"
+            },
+            {
+                "name": "DB_Timers.LTime_Min_n106751D_23H_47M_16S_854MS_775US_808NS",
+                "address": "DB_Timers.LTime_Min_n106751D_23H_47M_16S_854MS_775US_808NS",
+                "datatype": "LTime"
+            }
+        ],
+        "outputFormat": "object",
+        "x": 410,
+        "y": 160,
+        "wires": [
+            [
+                "rm_debug_all"
+            ]
+        ]
+    },
+    {
+        "id": "rm_debug_all",
+        "type": "debug",
+        "z": "read_multi_tab",
+        "name": "All values",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 660,
+        "y": 160,
+        "wires": []
+    },
+    {
+        "id": "rm_comment_live",
+        "type": "comment",
+        "z": "read_multi_tab",
+        "name": "2) Dynamic: msg.symbols set at runtime (same list as read all symbols)",
+        "info": "",
+        "x": 280,
+        "y": 260,
+        "wires": []
+    },
+    {
+        "id": "rm_inject_live",
+        "type": "inject",
+        "z": "read_multi_tab",
+        "name": "Read selected symbols",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 150,
+        "y": 320,
+        "wires": [
+            [
+                "rm_fn_live"
+            ]
+        ]
+    },
+    {
+        "id": "rm_fn_live",
+        "type": "function",
+        "z": "read_multi_tab",
+        "name": "Build msg.symbols",
+        "func": "msg.symbols = [\n    \"DB_FloatingPoint.Real_987d125\",\n    \"DB_FloatingPoint.LReal_987d125\",\n    \"DB_Integers.Int_12345\",\n    \"DB_Binary.Bool_False\",\n    \"DB_BitStrings.Byte_Min_0x00\",\n    \"DB_BitStrings.Word_Min_0x0000\",\n    \"DB_BitStrings.DWord_Min_0x00000000\",\n    \"DB_BitStrings.LWord_Min_0x0000000000000000\",\n    \"DB_CharacterStrings.Char_Space\",\n    \"DB_CharacterStrings.String_Empty\",\n    \"DB_CharacterStrings.WChar_Space\",\n    \"DB_CharacterStrings.WString_Empty\",\n    \"DB_Integers.SInt_Min_n128\",\n    \"DB_Integers.Int_Min_n32768\",\n    \"DB_Integers.DInt_Min_n2147483648\",\n    \"DB_Integers.USint_Min_0\",\n    \"DB_Integers.UInt_Min_0\",\n    \"DB_Integers.UDInt_Min_0\",\n    \"DB_Integers.LInt_Min_n9223372036854775808\",\n    \"DB_Integers.ULInt_Min_0\",\n    \"DB_FloatingPoint.Real_MinNeg_n3d402823e38\",\n    \"DB_FloatingPoint.LReal_MinNeg_n1d7976931348623157e308\",\n    \"DB_DateAndTime.Date_Min_1990_01_01\",\n    \"DB_DateAndTime.Time_Of_Day_Min_00_00_00d000\",\n    \"DB_DateAndTime.Date_And_Time_Min_1990_01_01_00_00_00\",\n    \"DB_DateAndTime.LTOD_Min_00_00_00d000000000\",\n    \"DB_DateAndTime.LDT_Min_1970_01_01_00_00_00d000000000\",\n    \"DB_DateAndTime.DTL_Min_1970_01_01_00_00_00d000000000\",\n    \"DB_Timers.Time_Min_n24D_20H_31M_23S_648MS\",\n    \"DB_Timers.S5Time_Min_0MS\",\n    \"DB_Timers.LTime_Min_n106751D_23H_47M_16S_854MS_775US_808NS\"\n];\nmsg.payload = '';\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 360,
+        "y": 320,
+        "wires": [
+            [
+                "rm_read_live"
+            ]
+        ]
+    },
+    {
+        "id": "rm_read_live",
+        "type": "s7-plus read",
+        "z": "read_multi_tab",
+        "name": "read (msg.symbols)",
+        "endpoint": "example_plc_ep",
+        "symbols": [],
+        "outputFormat": "object",
+        "x": 600,
+        "y": 320,
+        "wires": [
+            [
+                "rm_debug_live"
+            ]
+        ]
+    },
+    {
+        "id": "rm_debug_live",
+        "type": "debug",
+        "z": "read_multi_tab",
+        "name": "Selected symbols",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 840,
+        "y": 320,
+        "wires": []
+    },
+    {
+        "id": "example_plc_ep",
+        "type": "s7-plus endpoint",
+        "name": "PLC",
+        "address": "192.168.0.1",
+        "timeout": 10000
+    },
+    {
+        "id": "69768f9f5a51add5",
+        "type": "global-config",
+        "env": [],
+        "modules": {
+            "node-red-contrib-s7-plus": "0.0.1"
+        }
+    }
+]

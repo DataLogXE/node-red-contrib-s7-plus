@@ -1,0 +1,1460 @@
+<script type="text/html" data-template-name="s7-plus endpoint">
+    <div class="form-row">
+        <label for="node-config-input-name"><i class="fa fa-tag"></i> Name</label>
+        <input type="text" id="node-config-input-name" placeholder="Name">
+    </div>
+    <div class="form-row">
+        <label for="node-config-input-address"><i class="fa fa-globe"></i> Address</label>
+        <input type="text" id="node-config-input-address" placeholder="192.168.0.1">
+    </div>
+    <div class="form-row">
+        <label for="node-config-input-timeout"><i class="fa fa-clock-o"></i> Timeout (ms)</label>
+        <input type="number" id="node-config-input-timeout" placeholder="10000" min="100">
+    </div>
+</script>
+
+<script type="text/html" data-help-name="s7-plus endpoint">
+    <p>Shared S7CommPlus connection to a Siemens S7-1200/1500 PLC (ISO-on-TCP, port 102).</p>
+    <p>Configure IP address and timeout. The endpoint only manages the network session and
+    reconnect/watchdog logic — symbols are defined in each <b>S7+ Read</b> / <b>S7+ Write</b>
+    node individually.</p>
+    <p>On connect, no symbol table is loaded. Symbolic paths are resolved lazily on the first
+    read or write (walked along the PLC browse tree) and cached for five minutes. Use the
+    <b>S7+ Explore</b> node for a full manual browse.</p>
+    <p>Successful connects and unexpected disconnects are written to the Node-RED runtime log.
+    Set <code>S7P_DEBUG=endpoint</code> for detailed protocol and reconnect tracing.</p>
+</script>
+
+<style id="s7complus-browse-styles">
+    .s7complus-browse-body {
+        overflow-x: hidden;
+        overflow-y: auto;
+        width: 100%;
+        padding: 8px 0 8px 12px;
+        box-sizing: border-box;
+    }
+    .s7complus-browse-tree {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        font-family: var(--red-ui-primary-font);
+        font-size: var(--red-ui-primary-font-size);
+        color: var(--red-ui-primary-text-color);
+        user-select: none;
+        -webkit-user-select: none;
+    }
+    .s7complus-browse-item {
+        line-height: 22px;
+    }
+    .s7complus-browse-row {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        cursor: pointer;
+        border-radius: 2px;
+        padding: 0 2px;
+        user-select: none;
+        -webkit-user-select: none;
+    }
+    .s7complus-browse-row.selected,
+    .s7complus-browse-row.selected span {
+        background: #beebff;
+        color: #2e3138 !important;
+    }
+    .s7complus-browse-row.selected .s7complus-browse-chevron {
+        color: #2e3138 !important;
+    }
+    .s7complus-browse-chevron {
+        width: 14px;
+        display: inline-block;
+        flex-shrink: 0;
+        color: var(--red-ui-secondary-text-color, #888);
+        text-align: center;
+    }
+    .s7complus-browse-children {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: none;
+    }
+    .s7complus-browse-children.is-open {
+        display: block;
+    }
+    .s7complus-browse-muted {
+        color: var(--red-ui-secondary-text-color, #888);
+    }
+    .s7complus-browse-error {
+        color: var(--red-ui-text-color-error, #c00);
+    }
+    .s7complus-browse-empty {
+        margin-left: 14px;
+    }
+    .s7complus-scope-body {
+        overflow-x: hidden;
+        overflow-y: auto;
+        width: 100%;
+        padding: 8px 0 8px 12px;
+        box-sizing: border-box;
+    }
+    .s7complus-scope-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        font-family: var(--red-ui-primary-font);
+        font-size: var(--red-ui-primary-font-size);
+        color: var(--red-ui-primary-text-color);
+    }
+    .s7complus-scope-item {
+        line-height: 24px;
+    }
+    .s7complus-scope-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 0 2px;
+    }
+    .s7complus-scope-row label {
+        width: auto;
+        margin: 0;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .s7complus-scope-row input[type="checkbox"] {
+        width: auto;
+        margin: 0;
+    }
+    .s7complus-scope-row.is-disabled {
+        opacity: 0.45;
+    }
+    .s7complus-scope-chevron {
+        width: 14px;
+        display: inline-block;
+        flex-shrink: 0;
+        color: var(--red-ui-secondary-text-color, #888);
+        text-align: center;
+        cursor: pointer;
+    }
+    .s7complus-scope-children {
+        list-style: none;
+        margin: 0;
+        padding: 0 0 0 22px;
+        display: none;
+    }
+    .s7complus-scope-children.is-open {
+        display: block;
+    }
+    .s7complus-scope-hint {
+        color: var(--red-ui-secondary-text-color, #888);
+        font-size: 12px;
+        padding: 4px 0 4px 22px;
+    }
+    .s7complus-dialog > .ui-dialog-content {
+        overflow: hidden !important;
+        box-sizing: border-box;
+        padding: 0 !important;
+    }
+    .s7complus-dialog > .ui-dialog-content > div {
+        width: 100%;
+        height: 100%;
+        box-sizing: border-box;
+    }
+</style>
+
+<script type="text/javascript">
+    (function () {
+        function s7complusBrowsePayload(ctx, extra) {
+            return Object.assign({
+                id: ctx.endpointId || undefined,
+                address: ctx.address || undefined,
+                timeout: ctx.timeout,
+                browseSessionId: ctx.browseSessionId || undefined
+            }, extra || {});
+        }
+
+        function s7complusBrowseAjax(ctx, path, data) {
+            const root = (typeof RED !== 'undefined' && RED.settings && RED.settings.httpAdminRoot) || '/';
+            const base = root.endsWith('/') ? root : root + '/';
+            return $.ajax({
+                url: base + 's7complus/browse/' + path,
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(s7complusBrowsePayload(ctx, data))
+            });
+        }
+
+        function s7complusSetupDialogScroll(shell, scrollBody) {
+            const dialog = shell.closest('.ui-dialog');
+            dialog.addClass('s7complus-dialog');
+
+            function fitScrollBody() {
+                const content = dialog.children('.ui-dialog-content');
+                const available = content.innerHeight();
+                if (available > 0) {
+                    shell.css({ width: '100%', height: '100%' });
+                    scrollBody.css({
+                        maxHeight: available + 'px',
+                        height: available + 'px',
+                        width: '100%'
+                    });
+                }
+            }
+
+            fitScrollBody();
+            setTimeout(fitScrollBody, 0);
+            return fitScrollBody;
+        }
+
+        function s7complusAddSymbolRow(listEl, row, existing) {
+            if (!row || !row.name || !row.address) return false;
+            if (existing && existing[row.name]) return false;
+            listEl.editableList('addItem', row);
+            if (existing) existing[row.name] = true;
+            return true;
+        }
+
+        function s7complusEndpointBrowseContext(endpointId) {
+            const ep = endpointId ? RED.nodes.node(endpointId) : null;
+            return {
+                endpointId: endpointId || undefined,
+                address: ep ? ep.address : '',
+                timeout: ep ? (ep.timeout || 10000) : 10000,
+                browseSessionId: null
+            };
+        }
+
+        window.s7complusAddSymbolRow = s7complusAddSymbolRow;
+        window.s7complusEndpointBrowseContext = s7complusEndpointBrowseContext;
+
+        window.s7complusOpenBrowseTree = function (options) {
+            const ctx = options.context;
+            if (!ctx.address || !String(ctx.address).trim()) {
+                RED.notify('Enter a PLC address before browsing', 'warning');
+                return;
+            }
+
+            let selectedLi = null;
+            let selectedRow = null;
+            let browseSessionId = ctx.browseSessionId || null;
+
+            const treeWrap = $('<div/>', { class: 's7complus-browse-body' });
+            const treeRoot = $('<ul/>', { class: 's7complus-browse-tree' }).appendTo(treeWrap);
+            const shell = $('<div/>', { class: 'hide' }).append(treeWrap).appendTo('body');
+
+            function setAddButtonDisabled(disabled) {
+                shell.closest('.ui-dialog')
+                    .find('.ui-dialog-buttonpane button')
+                    .first()
+                    .prop('disabled', disabled);
+            }
+
+            function deselect() {
+                if (selectedRow) selectedRow.removeClass('selected');
+                selectedRow = null;
+                selectedLi = null;
+            }
+
+            function addSelected() {
+                if (!selectedLi) {
+                    RED.notify('Select a symbol in the tree', 'warning');
+                    return;
+                }
+                const node = selectedLi.data('browseNode');
+                if (!node) return;
+                if (!node.isLeaf) {
+                    RED.notify('Expand the tree and select a leaf symbol (scalar or array element)', 'warning');
+                    return;
+                }
+                setAddButtonDisabled(true);
+                s7complusBrowseAjax(ctx, 'resolve', { nodeId: node.id, browseSessionId: browseSessionId })
+                    .done(function (row) {
+                        if (options.onResolved) {
+                            options.onResolved(row);
+                        }
+                        RED.notify('Added: ' + row.name, 'success');
+                    })
+                    .fail(function (jq) {
+                        RED.notify('Resolve failed: ' + ((jq.responseJSON && jq.responseJSON.error) || jq.statusText), 'error');
+                    })
+                    .always(function () {
+                        setAddButtonDisabled(false);
+                    });
+            }
+
+            function renderNode(parentUl, node, depth) {
+                const li = $('<li/>', { class: 's7complus-browse-item', css: { marginLeft: (depth * 14) + 'px' } });
+                const row = $('<div/>', { class: 's7complus-browse-row' });
+                const chevron = $('<span/>', { class: 's7complus-browse-chevron' });
+                if (node.hasChildren) chevron.html('<i class="fa fa-caret-right"></i>');
+                else chevron.text(' ');
+                const labelEl = $('<span/>').text(node.label + (node.datatype ? ' (' + node.datatype + ')' : ''));
+                row.append(chevron, labelEl);
+                li.append(row);
+                parentUl.append(li);
+
+                const childUl = $('<ul/>', { class: 's7complus-browse-tree s7complus-browse-children' });
+                li.append(childUl);
+                let loaded = false;
+                let expanded = false;
+
+                function select() {
+                    if (selectedRow) selectedRow.removeClass('selected');
+                    selectedRow = row;
+                    row.addClass('selected');
+                    selectedLi = li;
+                    li.data('browseNode', node);
+                }
+
+                row.on('click', function (e) {
+                    e.stopPropagation();
+                    if (e.detail > 1) return;
+                    select();
+                });
+
+                row.on('dblclick', function (e) {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    if (node.isLeaf) {
+                        select();
+                        addSelected();
+                        return;
+                    }
+                    if (node.hasChildren) {
+                        if (selectedRow && selectedRow[0] === row[0]) deselect();
+                        expand();
+                    }
+                });
+
+                function expand() {
+                    if (!node.hasChildren) return;
+                    if (expanded) {
+                        expanded = false;
+                        childUl.removeClass('is-open');
+                        chevron.html('<i class="fa fa-caret-right"></i>');
+                        return;
+                    }
+                    expanded = true;
+                    chevron.html('<i class="fa fa-caret-down"></i>');
+                    if (loaded) {
+                        childUl.addClass('is-open');
+                        return;
+                    }
+                    chevron.html('<i class="fa fa-spinner fa-spin"></i>');
+                    s7complusBrowseAjax(ctx, 'children', { nodeId: node.id, browseSessionId: browseSessionId })
+                        .done(function (res) {
+                            loaded = true;
+                            chevron.html('<i class="fa fa-caret-down"></i>');
+                            (res.nodes || []).forEach(function (ch) {
+                                renderNode(childUl, ch, depth + 1);
+                            });
+                            childUl.addClass('is-open');
+                            if (!(res.nodes || []).length) {
+                                childUl.append($('<li/>', { class: 's7complus-browse-muted s7complus-browse-empty' }).text('(empty)'));
+                            }
+                        })
+                        .fail(function (jq) {
+                            expanded = false;
+                            chevron.html('<i class="fa fa-caret-right"></i>');
+                            RED.notify('Browse failed: ' + ((jq.responseJSON && jq.responseJSON.error) || jq.statusText), 'error');
+                        });
+                }
+
+                chevron.on('click', function (e) {
+                    e.stopPropagation();
+                    expand();
+                });
+            }
+
+            treeRoot.append($('<li/>', { class: 's7complus-browse-muted' }).text('Loading…'));
+
+            s7complusBrowseAjax(ctx, 'roots', {})
+                .done(function (res) {
+                    treeRoot.empty();
+                    browseSessionId = res.browseSessionId || browseSessionId;
+                    ctx.browseSessionId = browseSessionId;
+                    (res.nodes || []).forEach(function (n) {
+                        renderNode(treeRoot, n, 0);
+                    });
+                    if (!(res.nodes || []).length) {
+                        treeRoot.append($('<li/>', { class: 's7complus-browse-muted' }).text('No blocks found'));
+                    }
+                })
+                .fail(function (jq) {
+                    treeRoot.empty();
+                    treeRoot.append($('<li/>', { class: 's7complus-browse-error' })
+                        .text((jq.responseJSON && jq.responseJSON.error) || 'Browse failed'));
+                });
+
+            shell.dialog({
+                modal: true,
+                title: 'Browse PLC — select symbols to add',
+                width: 500,
+                height: 520,
+                resizable: true,
+                buttons: [
+                    {
+                        text: 'Add selected',
+                        click: function () {
+                            addSelected();
+                        }
+                    },
+                    {
+                        text: 'Close',
+                        click: function () {
+                            shell.dialog('close');
+                        }
+                    }
+                ],
+                open: function () {
+                    s7complusSetupDialogScroll(shell, treeWrap);
+                },
+                resize: function () {
+                    s7complusSetupDialogScroll(shell, treeWrap);
+                },
+                close: function () {
+                    shell.dialog('destroy').remove();
+                }
+            });
+        };
+
+        const S7_EXPLORE_MEMORY_AREAS = [
+            { name: 'IArea', label: 'IArea (Inputs)' },
+            { name: 'QArea', label: 'QArea (Outputs)' },
+            { name: 'MArea', label: 'MArea (Merker)' },
+            { name: 'S7Timers', label: 'S7Timers (Timers)' },
+            { name: 'S7Counters', label: 'S7Counters (Counters)' }
+        ];
+
+        function s7complusNormalizeExploreScope(scope) {
+            if (!scope || scope.everything) {
+                return { everything: true, dbs: [], areas: [] };
+            }
+            const dbs = Array.isArray(scope.dbs) ? scope.dbs.filter(Boolean) : [];
+            const areas = Array.isArray(scope.areas) ? scope.areas.filter(Boolean) : [];
+            if (dbs.length === 0 && areas.length === 0) {
+                return { everything: true, dbs: [], areas: [] };
+            }
+            return { everything: false, dbs: dbs, areas: areas };
+        }
+
+        function s7complusExploreScopeSummary(scope) {
+            const s = s7complusNormalizeExploreScope(scope);
+            if (s.everything) return 'Everything';
+            const parts = [];
+            if (s.dbs.length) {
+                parts.push(s.dbs.length + ' DB' + (s.dbs.length === 1 ? '' : 's'));
+            }
+            if (s.areas.length) {
+                parts.push(s.areas.join(', '));
+            }
+            return parts.length ? parts.join(', ') : 'Everything';
+        }
+
+        window.s7complusNormalizeExploreScope = s7complusNormalizeExploreScope;
+        window.s7complusExploreScopeSummary = s7complusExploreScopeSummary;
+        window.s7complusExploreScopeDraft = { everything: true, dbs: [], areas: [] };
+
+        window.s7complusOpenExploreScopeDialog = function (options) {
+            const ctx = options.context;
+            if (!ctx.address || !String(ctx.address).trim()) {
+                RED.notify('Enter a PLC address on the endpoint before selecting scope', 'warning');
+                return;
+            }
+
+            const initial = s7complusNormalizeExploreScope(options.scope);
+            const body = $('<div/>', { class: 's7complus-scope-body' });
+            const list = $('<ul/>', { class: 's7complus-scope-list' }).appendTo(body);
+            const shell = $('<div/>', { class: 'hide' }).append(body).appendTo('body');
+
+            const everythingRow = $('<div/>', { class: 's7complus-scope-row' });
+            const everythingCb = $('<input/>', { type: 'checkbox', id: 's7complus-scope-everything' });
+            everythingRow.append(
+                $('<label/>').append(everythingCb, $('<span/>').text('Everything'))
+            );
+            list.append($('<li/>', { class: 's7complus-scope-item' }).append(everythingRow));
+
+            const dbItem = $('<li/>', { class: 's7complus-scope-item' });
+            const dbRow = $('<div/>', { class: 's7complus-scope-row' });
+            const dbChevron = $('<span/>', { class: 's7complus-scope-chevron' })
+                .html('<i class="fa fa-caret-right"></i>');
+            const dbParentCb = $('<input/>', { type: 'checkbox', id: 's7complus-scope-dbs-parent' });
+            const dbLabel = $('<span/>', { class: 's7complus-scope-db-label', css: { cursor: 'pointer' } })
+                .text('Data Blocks (DB)');
+            dbRow.append(dbChevron, $('<label/>').append(dbParentCb), dbLabel);
+            dbItem.append(dbRow);
+            const dbChildren = $('<ul/>', { class: 's7complus-scope-children' });
+            const dbHint = $('<li/>', { class: 's7complus-scope-hint' }).text('Loading DB list...');
+            dbChildren.append(dbHint);
+            dbItem.append(dbChildren);
+            list.append(dbItem);
+
+            const areaCbs = {};
+            S7_EXPLORE_MEMORY_AREAS.forEach(function (area) {
+                const row = $('<div/>', { class: 's7complus-scope-row s7complus-scope-area-row' });
+                const cb = $('<input/>', { type: 'checkbox', class: 's7complus-scope-area-cb' });
+                row.append($('<label/>').append(cb, $('<span/>').text(area.label)));
+                list.append($('<li/>', { class: 's7complus-scope-item s7complus-scope-area-item' }).append(row));
+                areaCbs[area.name] = cb;
+            });
+
+            const dbCbs = {};
+            const dbItemRows = {};
+            let dbExpanded = false;
+            let dbFilterValue = '';
+
+            function setDbExpanded(open) {
+                dbExpanded = open;
+                dbChildren.toggleClass('is-open', open);
+                dbChevron.html(open ? '<i class="fa fa-caret-down"></i>' : '<i class="fa fa-caret-right"></i>');
+            }
+
+            function wildcardToRegExp(pattern) {
+                const escaped = String(pattern).replace(/[.+^${}()|[\]\\]/g, '\\$&');
+                const expr = escaped.replace(/\*/g, '.*').replace(/\?/g, '.');
+                return new RegExp(expr, 'i');
+            }
+
+            function applyDbFilter(pattern) {
+                dbFilterValue = pattern || '';
+                const trimmed = dbFilterValue.trim();
+                const re = trimmed ? wildcardToRegExp(trimmed) : null;
+                let visible = 0;
+                Object.keys(dbItemRows).forEach(function (name) {
+                    const checked = dbCbs[name] && dbCbs[name].prop('checked');
+                    const match = !re || re.test(name) || checked;
+                    dbItemRows[name].toggle(match);
+                    if (match) visible++;
+                });
+                dbChildren.find('.s7complus-scope-db-empty').remove();
+                if (re && visible === 0 && Object.keys(dbItemRows).length) {
+                    dbChildren.append($('<li/>', { class: 's7complus-scope-hint s7complus-scope-db-empty' })
+                        .text('No DBs match "' + trimmed + '"'));
+                }
+            }
+
+            function syncDbParentState() {
+                const names = Object.keys(dbCbs);
+                if (!names.length) {
+                    dbParentCb.prop('checked', false).prop('indeterminate', false);
+                    return;
+                }
+                const checked = names.filter(function (n) { return dbCbs[n].prop('checked'); });
+                if (checked.length === 0) {
+                    dbParentCb.prop('checked', false).prop('indeterminate', false);
+                } else if (checked.length === names.length) {
+                    dbParentCb.prop('checked', true).prop('indeterminate', false);
+                } else {
+                    dbParentCb.prop('checked', false).prop('indeterminate', true);
+                }
+            }
+
+            function setScopeControlsDisabled(disabled) {
+                dbRow.toggleClass('is-disabled', disabled);
+                dbParentCb.prop('disabled', disabled);
+                Object.keys(dbCbs).forEach(function (name) {
+                    dbCbs[name].prop('disabled', disabled);
+                });
+                dbChevron.css('pointer-events', disabled ? 'none' : 'auto');
+                $('.s7complus-scope-area-row').toggleClass('is-disabled', disabled);
+                Object.keys(areaCbs).forEach(function (name) {
+                    areaCbs[name].prop('disabled', disabled);
+                });
+            }
+
+            function applyInitialScope() {
+                everythingCb.prop('checked', initial.everything);
+                if (initial.everything) {
+                    setScopeControlsDisabled(true);
+                    dbParentCb.prop('checked', true).prop('indeterminate', false);
+                    Object.keys(dbCbs).forEach(function (name) {
+                        dbCbs[name].prop('checked', true);
+                    });
+                    Object.keys(areaCbs).forEach(function (name) {
+                        areaCbs[name].prop('checked', true);
+                    });
+                    return;
+                }
+                setScopeControlsDisabled(false);
+                Object.keys(areaCbs).forEach(function (name) {
+                    areaCbs[name].prop('checked', initial.areas.indexOf(name) >= 0);
+                });
+                const dbSet = {};
+                initial.dbs.forEach(function (n) { dbSet[n] = true; });
+                Object.keys(dbCbs).forEach(function (name) {
+                    dbCbs[name].prop('checked', !!dbSet[name]);
+                });
+                syncDbParentState();
+            }
+
+            function collectScope() {
+                if (everythingCb.prop('checked')) {
+                    return { everything: true, dbs: [], areas: [] };
+                }
+                const dbs = Object.keys(dbCbs).filter(function (name) {
+                    return dbCbs[name].prop('checked');
+                });
+                const areas = Object.keys(areaCbs).filter(function (name) {
+                    return areaCbs[name].prop('checked');
+                });
+                return s7complusNormalizeExploreScope({ everything: false, dbs: dbs, areas: areas });
+            }
+
+            let savedSelection = null;
+
+            everythingCb.on('change', function () {
+                if (everythingCb.prop('checked')) {
+                    savedSelection = {
+                        dbs: Object.keys(dbCbs).filter(function (name) {
+                            return dbCbs[name].prop('checked');
+                        }),
+                        areas: Object.keys(areaCbs).filter(function (name) {
+                            return areaCbs[name].prop('checked');
+                        }),
+                        dbExpanded: dbExpanded
+                    };
+                    setScopeControlsDisabled(true);
+                    setDbExpanded(false);
+                    dbParentCb.prop('checked', true).prop('indeterminate', false);
+                    Object.keys(dbCbs).forEach(function (name) {
+                        dbCbs[name].prop('checked', true);
+                    });
+                    Object.keys(areaCbs).forEach(function (name) {
+                        areaCbs[name].prop('checked', true);
+                    });
+                } else {
+                    setScopeControlsDisabled(false);
+                    if (savedSelection) {
+                        const dbSet = {};
+                        savedSelection.dbs.forEach(function (n) { dbSet[n] = true; });
+                        Object.keys(dbCbs).forEach(function (name) {
+                            dbCbs[name].prop('checked', !!dbSet[name]);
+                        });
+                        const areaSet = {};
+                        savedSelection.areas.forEach(function (n) { areaSet[n] = true; });
+                        Object.keys(areaCbs).forEach(function (name) {
+                            areaCbs[name].prop('checked', !!areaSet[name]);
+                        });
+                        syncDbParentState();
+                        setDbExpanded(!!savedSelection.dbExpanded);
+                        savedSelection = null;
+                    }
+                }
+            });
+
+            dbParentCb.on('change', function () {
+                const checked = dbParentCb.prop('checked');
+                dbParentCb.prop('indeterminate', false);
+                Object.keys(dbCbs).forEach(function (name) {
+                    dbCbs[name].prop('checked', checked);
+                });
+            });
+
+            dbChevron.on('click', function (e) {
+                e.stopPropagation();
+                setDbExpanded(!dbExpanded);
+            });
+
+            dbLabel.on('click', function (e) {
+                e.stopPropagation();
+                if (dbLabel.closest('.s7complus-scope-row').hasClass('is-disabled')) return;
+                setDbExpanded(!dbExpanded);
+            });
+
+            s7complusBrowseAjax(ctx, 'roots', { browseSessionId: ctx.browseSessionId || null })
+                .done(function (res) {
+                    dbHint.remove();
+                    const blocks = (res.nodes || []).filter(function (n) { return n.nodeKind === 'block'; });
+                    if (ctx.browseSessionId !== undefined) {
+                        ctx.browseSessionId = res.browseSessionId || ctx.browseSessionId;
+                    }
+                    if (!blocks.length) {
+                        dbChildren.append($('<li/>', { class: 's7complus-scope-hint' })
+                            .text('No DBs found — connect to the PLC to list data blocks'));
+                        dbParentCb.prop('disabled', true);
+                        applyInitialScope();
+                        return;
+                    }
+                    blocks.forEach(function (node) {
+                        const row = $('<div/>', { class: 's7complus-scope-row' });
+                        const cb = $('<input/>', { type: 'checkbox' });
+                        row.append($('<label/>').append(cb, $('<span/>').text(node.label)));
+                        const li = $('<li/>', { class: 's7complus-scope-item' }).append(row);
+                        dbChildren.append(li);
+                        dbCbs[node.label] = cb;
+                        dbItemRows[node.label] = li;
+                        cb.on('change', function () {
+                            syncDbParentState();
+                            applyDbFilter(dbFilterValue);
+                        });
+                    });
+                    applyInitialScope();
+                    applyDbFilter(dbFilterValue);
+                })
+                .fail(function (jq) {
+                    dbHint.text((jq.responseJSON && jq.responseJSON.error) || 'Failed to load DB list');
+                    dbParentCb.prop('disabled', true);
+                    applyInitialScope();
+                });
+
+            shell.dialog({
+                modal: true,
+                title: 'Explore scope — select memory areas',
+                width: 460,
+                height: 480,
+                resizable: true,
+                buttons: [
+                    {
+                        text: 'OK',
+                        click: function () {
+                            const scope = collectScope();
+                            window.s7complusExploreScopeDraft = scope;
+                            if (options.onSaved) options.onSaved(scope);
+                            shell.dialog('close');
+                        }
+                    },
+                    {
+                        text: 'Cancel',
+                        click: function () {
+                            shell.dialog('close');
+                        }
+                    }
+                ],
+                open: function () {
+                    s7complusSetupDialogScroll(shell, body);
+
+                    const buttonPane = shell.closest('.ui-dialog').find('.ui-dialog-buttonpane');
+                    buttonPane.css({ display: 'flex', alignItems: 'center', gap: '8px' });
+                    buttonPane.find('.ui-dialog-buttonset').css({ marginLeft: 'auto', float: 'none' });
+
+                    const filterWrap = $('<div/>', {
+                        class: 's7complus-scope-filter',
+                        css: { display: 'flex', alignItems: 'center', gap: '6px' }
+                    });
+                    const inputWrap = $('<div/>', {
+                        css: { position: 'relative', display: 'inline-flex', alignItems: 'center' }
+                    });
+                    const filterInput = $('<input/>', {
+                        type: 'text',
+                        placeholder: 'DB-Filter',
+                        css: { width: '180px', margin: 0, paddingRight: '22px', boxSizing: 'border-box' }
+                    }).val(dbFilterValue);
+                    const clearBtn = $('<span/>', {
+                        title: 'Clear filter',
+                        css: {
+                            position: 'absolute',
+                            right: '6px',
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            lineHeight: '1',
+                            cursor: 'pointer',
+                            color: 'var(--red-ui-secondary-text-color, #888)',
+                            display: dbFilterValue ? 'inline' : 'none'
+                        }
+                    }).html('<i class="fa fa-times-circle"></i>');
+                    function refreshFilter() {
+                        if (!dbExpanded) setDbExpanded(true);
+                        clearBtn.css('display', filterInput.val() ? 'inline' : 'none');
+                        applyDbFilter(filterInput.val());
+                    }
+                    filterInput.on('input', refreshFilter);
+                    clearBtn.on('click', function () {
+                        filterInput.val('');
+                        refreshFilter();
+                        filterInput.trigger('focus');
+                    });
+                    inputWrap.append(filterInput, clearBtn);
+                    filterWrap.append(inputWrap);
+                    buttonPane.prepend(filterWrap);
+                },
+                resize: function () {
+                    s7complusSetupDialogScroll(shell, body);
+                },
+                close: function () {
+                    shell.dialog('destroy').remove();
+                }
+            });
+        };
+    })();
+
+    RED.nodes.registerType('s7-plus endpoint', {
+        category: 'config',
+        paletteLabel: 'S7+ Endpoint',
+        defaults: {
+            name: { value: '' },
+            address: { value: '', required: true },
+            timeout: { value: 10000 }
+        },
+        label: function () {
+            return this.name || ('S7+ ' + this.address);
+        },
+        oneditprepare: function () {
+            $('#node-config-input-timeout').val(this.timeout || 10000);
+        }
+    });
+</script>
+
+<script type="text/html" data-template-name="s7-plus read">
+    <div class="form-row">
+        <label for="node-input-name"><i class="fa fa-tag"></i> Name</label>
+        <input type="text" id="node-input-name" placeholder="Name">
+    </div>
+    <div class="form-row">
+        <label for="node-input-endpoint"><i class="fa fa-server"></i> Endpoint</label>
+        <input type="text" id="node-input-endpoint">
+    </div>
+    <div class="form-row">
+        <label><i class="fa fa-database"></i> Symbols</label>
+        <button type="button" id="s7complus-in-pick-btn" class="red-ui-button">
+            <i class="fa fa-sitemap"></i> Pick from PLC
+        </button>
+        <span id="s7complus-in-symbols-count" style="margin-left:8px;color:#888;"></span>
+    </div>
+    <div class="form-row node-input-symbols-row">
+        <ol id="node-input-in-symbols"></ol>
+    </div>
+    <div class="form-row">
+        <label for="node-input-outputFormat"><i class="fa fa-sign-out"></i> Output Format</label>
+        <select id="node-input-outputFormat">
+            <option value="object">Object</option>
+            <option value="array">Array</option>
+        </select>
+    </div>
+</script>
+
+<script type="text/html" data-help-name="s7-plus read">
+    <p>Reads one or more PLC symbols from a Siemens S7-1200/1500 via the configured
+    <b>S7+ Endpoint</b>. Every incoming message triggers exactly one read.</p>
+
+    <p>Which symbols are read is normally configured on the node with the
+    <b>Pick from PLC</b> button. The results are returned in <code>msg.payload</code>.</p>
+
+    <h3>Inputs</h3>
+    <p>Every incoming message triggers exactly one read. You do not need to set
+    <code>msg.payload</code> — an inject with an empty payload is enough.</p>
+    <dl class="message-properties">
+        <dt class="optional">symbols <span class="property-type">string[]</span></dt>
+        <dd>Optional. <b>Replaces</b> the symbols configured on the node for this
+            one message (it does not add to them).
+            <ul>
+                <li>If <code>msg.symbols</code> is set, the node reads <b>only</b>
+                those symbols and <b>ignores</b> the ones configured in the editor.</li>
+                <li>If <code>msg.symbols</code> is not set, the node uses the
+                symbols configured in the editor (the normal case).</li>
+                <li>Only an <b>array of strings</b> is accepted, e.g.
+                <code>[ "Motor.speed", "Pump.on" ]</code>. Any other type
+                (objects, single string, etc.) is rejected with an error.</li>
+            </ul></dd>
+
+        <dt class="optional">addSymbols <span class="property-type">string[]</span></dt>
+        <dd>Optional. A list of additional symbol paths to read on top of the symbols
+            from the editor or from <code>msg.symbols</code>, e.g.
+            <code>msg.addSymbols = ["DB1.speed", "DB2.temp[0]"]</code>.
+            <ul>
+                <li>The list is <b>merged</b> with those symbols (it adds to them, it
+                does not replace them).</li>
+                <li>A symbol that appears in both is read only once.</li>
+                <li>Only symbolic path strings are supported (same as names from
+                <b>S7+ Explore</b> or <b>Pick from PLC</b>).</li>
+            </ul>
+            Leave <code>msg.addSymbols</code> unset to read only the base symbol list.</dd>
+    </dl>
+
+    <h3>Outputs</h3>
+    <p>The <b>Output Format</b> option on the node controls how results are returned in
+    <code>msg.payload</code>:</p>
+    <ul>
+        <li><b>Object</b> (default) — one property per symbol, keyed by symbol name.</li>
+        <li><b>Array</b> — an array of objects, each with <code>symbol</code>,
+        <code>value</code>, <code>status</code>, and <code>error</code>.</li>
+    </ul>
+    <dl class="message-properties">
+        <dt>payload <span class="property-type">object | array</span></dt>
+        <dd>
+            <p><b>Object format:</b> keyed by symbol name, with one entry per read symbol.
+            Each entry is an object with:</p>
+            <ul>
+                <li><code>value</code> – the decoded value on success, or <code>null</code> on error</li>
+                <li><code>status</code> – <code>"ok"</code> or <code>"error"</code></li>
+                <li><code>error</code> – error text, empty string on success</li>
+            </ul>
+            <p><b>Array format:</b> same fields per symbol, plus <code>symbol</code> with the
+            symbol name. Evaluate with <code>msg.payload.find(p =&gt; p.symbol === '...')</code>
+            or loop over the array.</p>
+        </dd>
+    </dl>
+    <p>Per-symbol read errors are <b>not</b> fatal: the message is still sent and the node
+    turns yellow. With object format, evaluate <code>msg.payload[name].status</code> downstream;
+    with array format, check each item's <code>status</code>. Only a connection
+    or protocol failure aborts the whole read: the node turns red, no message is sent, and the
+    error is raised so it can be handled by the flow's error handling.</p>
+
+    <h3>Details</h3>
+    <p>Symbols are picked from the live PLC symbol tree via <b>Pick from PLC</b>; each row
+    shows its <code>name</code> (the output key) and datatype. Symbols are re-resolved
+    symbolically at runtime, so the correct datatype is determined automatically &mdash; you
+    never set it by hand.</p>
+    <p>Resolved symbols are cached for 5 minutes, so repeated reads are fast. If the PLC
+    program changes, the mismatch is detected automatically and the symbols are re-resolved.</p>
+    <p>While a read is still running, further incoming messages are skipped (node status
+    <i>"skipped (busy)"</i>) to protect the connection from overload.</p>
+
+    <h3>Example</h3>
+    <p>Read the configured symbols (any incoming message triggers the read).
+    Result in <code>msg.payload</code> (object format):</p>
+    <pre>{
+  "Motor.speed": { "value": 1450, "status": "ok", "error": "" },
+  "Tank.level":  { "value": 73.2, "status": "ok", "error": "" }
+}</pre>
+    <p>Same read with array format:</p>
+    <pre>[
+  { "symbol": "Motor.speed", "value": 1450, "status": "ok", "error": "" },
+  { "symbol": "Tank.level",  "value": 73.2,  "status": "ok", "error": "" }
+]</pre>
+    <p>Read additional ad-hoc symbols without configuring them, by setting:</p>
+    <pre>msg.addSymbols = ["DB1.temperature"]</pre>
+    <p>After <b>S7+ Explore</b>, copy the browse result into <code>msg.addSymbols</code>
+    before read (e.g. in a <b>function</b> node):</p>
+    <pre>msg.addSymbols = msg.payload;
+return msg;</pre>
+</script>
+
+<script type="text/javascript">
+    (function () {
+        function buildSymbolsEditableList(listSelector, countSelector) {
+            const list = $(listSelector);
+            list.editableList({
+                addItem: function (container, index, data) {
+                    const row = $('<div/>', { style: 'display:flex;gap:6px;align-items:center;' }).appendTo(container);
+                    $('<input/>', { type: 'text', class: 'node-input-s7sym-name', placeholder: 'Symbol name' })
+                        .css('flex', '3 1 0')
+                        .css('min-width', '0')
+                        .val(data ? data.name : '')
+                        .attr('title', data && data.address ? ('Access: ' + data.address) : '')
+                        .prop('readonly', true)
+                        .appendTo(row);
+                    // Resolved access address is kept for persistence and msg.symbols
+                    // compatibility, but hidden: it is only diagnostic and gets re-resolved
+                    // symbolically at runtime. It is surfaced via the name field tooltip.
+                    $('<input/>', { type: 'hidden', class: 'node-input-s7sym-address' })
+                        .val(data ? data.address : '')
+                        .appendTo(row);
+                    $('<input/>', { type: 'text', class: 'node-input-s7sym-datatype', placeholder: 'Datatype' })
+                        .css('flex', '0 0 110px')
+                        .css('min-width', '0')
+                        .prop('readonly', true)
+                        .val(data ? (data.datatype || '') : '')
+                        .appendTo(row);
+                },
+                addButton: false,
+                removable: true,
+                sortable: true
+            });
+            function refreshCount() {
+                let n = 0;
+                list.editableList('items').each(function () { n++; });
+                if (countSelector) {
+                    $(countSelector).text(n ? (n + ' symbol' + (n === 1 ? '' : 's')) : '');
+                }
+            }
+            list.on('change input', refreshCount);
+            return { list: list, refreshCount: refreshCount };
+        }
+
+        function collectExistingNames(list) {
+            const existing = {};
+            list.editableList('items').each(function () {
+                const n = $(this).find('.node-input-s7sym-name').val();
+                if (n) existing[n] = true;
+            });
+            return existing;
+        }
+
+        function serializeSymbols(list) {
+            const rows = [];
+            list.editableList('items').each(function () {
+                const name = $(this).find('.node-input-s7sym-name').val();
+                const address = $(this).find('.node-input-s7sym-address').val();
+                const datatype = $(this).find('.node-input-s7sym-datatype').val();
+                if (name && address) {
+                    rows.push({ name: name, address: address, datatype: datatype || undefined });
+                }
+            });
+            return rows;
+        }
+
+        function wirePickButton(pickBtnSelector, listGetter, countRefresh) {
+            $(pickBtnSelector).on('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                const epId = $('#node-input-endpoint').val();
+                if (!epId) {
+                    RED.notify('Select an endpoint first', 'warning');
+                    return;
+                }
+                const ctx = window.s7complusEndpointBrowseContext(epId);
+                if (!ctx.address || !String(ctx.address).trim()) {
+                    RED.notify('Configure the endpoint PLC address first', 'warning');
+                    return;
+                }
+                const list = listGetter();
+                const existing = collectExistingNames(list);
+                window.s7complusOpenBrowseTree({
+                    context: ctx,
+                    onResolved: function (row) {
+                        if (window.s7complusAddSymbolRow(list, row, existing)) {
+                            countRefresh();
+                        }
+                    }
+                });
+            });
+        }
+
+        window.s7complusSymListSerialize = serializeSymbols;
+        window.s7complusSymListBuild = buildSymbolsEditableList;
+        window.s7complusSymListWirePick = wirePickButton;
+
+        function prepareOutputFormat(node) {
+            $('#node-input-outputFormat').val(node.outputFormat || 'object');
+        }
+
+        function saveOutputFormat(node) {
+            node.outputFormat = $('#node-input-outputFormat').val() || 'object';
+        }
+
+        window.s7complusPrepareOutputFormat = prepareOutputFormat;
+        window.s7complusSaveOutputFormat = saveOutputFormat;
+    })();
+
+    RED.nodes.registerType('s7-plus read', {
+        category: 'S7 Plus',
+        color: '#3FADB5',
+        paletteLabel: 'S7+ Read',
+        defaults: {
+            name: { value: '' },
+            endpoint: { value: '', type: 's7-plus endpoint', required: true },
+            symbols: { value: [] },
+            outputFormat: { value: 'object' }
+        },
+        inputs: 1,
+        outputs: 1,
+        icon: 's7complus.svg',
+        label: function () {
+            if (this.name) return this.name;
+            if (Array.isArray(this.symbols) && this.symbols.length) {
+                return this.symbols.length === 1
+                    ? ('S7+ Read ' + this.symbols[0].name)
+                    : ('S7+ Read [' + this.symbols.length + ']');
+            }
+            return 'S7+ Read';
+        },
+        labelStyle: function () {
+            return this.name ? 'node_label_italic' : '';
+        },
+        oneditprepare: function () {
+            const ctrl = window.s7complusSymListBuild('#node-input-in-symbols', '#s7complus-in-symbols-count');
+            const table = Array.isArray(this.symbols) ? this.symbols : [];
+            table.forEach(function (row) { ctrl.list.editableList('addItem', row); });
+            ctrl.refreshCount();
+            window.s7complusSymListWirePick('#s7complus-in-pick-btn', function () { return ctrl.list; }, ctrl.refreshCount);
+            window.s7complusPrepareOutputFormat(this);
+        },
+        oneditsave: function () {
+            this.symbols = window.s7complusSymListSerialize($('#node-input-in-symbols'));
+            window.s7complusSaveOutputFormat(this);
+        }
+    });
+</script>
+
+<script type="text/html" data-template-name="s7-plus write">
+    <div class="form-row">
+        <label for="node-input-name"><i class="fa fa-tag"></i> Name</label>
+        <input type="text" id="node-input-name" placeholder="Name">
+    </div>
+    <div class="form-row">
+        <label for="node-input-endpoint"><i class="fa fa-server"></i> Endpoint</label>
+        <input type="text" id="node-input-endpoint">
+    </div>
+    <div class="form-row">
+        <label><i class="fa fa-database"></i> Symbols</label>
+        <button type="button" id="s7complus-out-pick-btn" class="red-ui-button">
+            <i class="fa fa-sitemap"></i> Pick from PLC
+        </button>
+        <span id="s7complus-out-symbols-count" style="margin-left:8px;color:#888;"></span>
+    </div>
+    <div class="form-row node-input-symbols-row">
+        <ol id="node-input-out-symbols"></ol>
+    </div>
+    <div class="form-row">
+        <label for="node-input-outputFormat"><i class="fa fa-sign-out"></i> Output Format</label>
+        <select id="node-input-outputFormat">
+            <option value="object">Object</option>
+            <option value="array">Array</option>
+        </select>
+    </div>
+</script>
+
+<script type="text/html" data-help-name="s7-plus write">
+    <p>Writes one or more PLC symbols on a Siemens S7-1200/1500 via the configured
+    <b>S7+ Endpoint</b>. Every incoming message triggers exactly one write.</p>
+
+    <p>Which symbols are written is normally configured on the node with the
+    <b>Pick from PLC</b> button. Override the target list per message with
+    <code>msg.symbols</code> (top-level). The values to write come from
+    <code>msg.payload</code>.</p>
+
+    <h3>Inputs</h3>
+    <p>Every incoming message triggers exactly one write. Unlike <b>S7+ Read</b>,
+    <code>msg.payload</code> must contain the value(s) to write &mdash; an empty
+    payload is not enough.</p>
+    <dl class="message-properties">
+        <dt>payload <span class="property-type">object | scalar</span></dt>
+        <dd><b>Input:</b> the value(s) to write. The format depends on how many symbols
+            the node writes:
+            <ul>
+                <li><b>Exactly one symbol:</b> put the value straight into
+                <code>msg.payload</code>. Example for the value 1500:
+                <code>msg.payload = 1500</code>.</li>
+                <li><b>Two or more symbols:</b> <code>msg.payload</code> must be an
+                object. Each key is the symbol name, each value is what to write to
+                it. Example:
+                <code>msg.payload = { "Motor.speed": 1500, "Pump.on": true }</code>.</li>
+            </ul>
+            A value is always assigned to the symbol whose name matches its key.</dd>
+
+        <dt class="optional">symbols <span class="property-type">array</span></dt>
+        <dd>Optional. <b>Replaces</b> the symbols configured on the node for this
+            one message (it does not add to them).
+            <ul>
+                <li>If <code>msg.symbols</code> is set, the node writes <b>only</b>
+                those symbols and <b>ignores</b> the ones configured in the editor.</li>
+                <li>If <code>msg.symbols</code> is not set, the node uses the
+                symbols configured in the editor (the normal case).</li>
+            </ul>
+            Provide a list of symbol names, e.g.
+            <code>[ "Motor.speed", "Pump.on" ]</code> (objects like
+            <code>{ "name": "Motor.speed" }</code> also work). The values for these
+            symbols still come from <code>msg.payload</code>, using the same rules
+            as above.</dd>
+    </dl>
+
+    <h3>Outputs</h3>
+    <p>The node <b>replaces</b> <code>msg.payload</code> with the write result. If you
+    need the original input value downstream, copy it to another property (e.g. with a
+    <b>change</b> node) before the write.</p>
+    <p>The <b>Output Format</b> option on the node controls how results are returned in
+    <code>msg.payload</code>:</p>
+    <ul>
+        <li><b>Object</b> (default) — one property per symbol, keyed by symbol name.</li>
+        <li><b>Array</b> — an array of objects, each with <code>symbol</code>,
+        <code>value</code>, <code>status</code>, and <code>error</code>.</li>
+    </ul>
+    <dl class="message-properties">
+        <dt>payload <span class="property-type">object | array</span></dt>
+        <dd>
+            <p><b>Object format:</b> keyed by symbol name, with one entry per written symbol.
+            Each entry is an object with:</p>
+            <ul>
+                <li><code>value</code> – the written value on success, or <code>null</code> on error</li>
+                <li><code>status</code> – <code>"ok"</code> or <code>"error"</code></li>
+                <li><code>error</code> – error text, empty string on success</li>
+            </ul>
+            <p><b>Array format:</b> same fields per symbol, plus <code>symbol</code> with the
+            symbol name. Evaluate with <code>msg.payload.find(p =&gt; p.symbol === '...')</code>
+            or loop over the array.</p>
+        </dd>
+    </dl>
+    <p>Per-symbol write errors are <b>not</b> fatal: the message is still sent and the node
+    turns yellow. With object format, evaluate <code>msg.payload[name].status</code> downstream;
+    with array format, check each item's <code>status</code>. Only a connection
+    or protocol failure aborts the whole write: the node turns red, no message is sent, and the
+    error is raised so it can be handled by the flow's error handling.</p>
+
+    <h3>Details</h3>
+    <p>Symbols are picked from the live PLC symbol tree via <b>Pick from PLC</b>; each row
+    shows its <code>name</code> and datatype. Symbols are re-resolved symbolically at runtime,
+    so the correct datatype is determined automatically &mdash; you never set it by hand or
+    via message properties.</p>
+    <p>While a write is still running, further incoming messages are skipped (node status
+    <i>"skipped (busy)"</i>) to protect the connection from overload.</p>
+
+    <h3>Example</h3>
+    <p>Write a single configured symbol <code>Motor.speed</code>:</p>
+    <pre>msg.payload = 1500</pre>
+    <p>Write several symbols at once:</p>
+    <pre>msg.payload = {
+  "Motor.speed": 1500,
+  "Pump.on": true
+}</pre>
+    <p>Result in <code>msg.payload</code> after the write (object format):</p>
+    <pre>{
+  "Motor.speed": { "value": 1500, "status": "ok", "error": "" },
+  "Pump.on":     { "value": true, "status": "ok", "error": "" }
+}</pre>
+    <p>Same write with array format:</p>
+    <pre>[
+  { "symbol": "Motor.speed", "value": 1500, "status": "ok", "error": "" },
+  { "symbol": "Pump.on",     "value": true, "status": "ok", "error": "" }
+]</pre>
+    <p>Override symbols for one message (values still from <code>msg.payload</code>):</p>
+    <pre>msg.symbols = ["Pump.on"];
+msg.payload = true;
+return msg;</pre>
+</script>
+
+<script type="text/javascript">
+    RED.nodes.registerType('s7-plus write', {
+        category: 'S7 Plus',
+        color: '#3FADB5',
+        paletteLabel: 'S7+ Write',
+        defaults: {
+            name: { value: '' },
+            endpoint: { value: '', type: 's7-plus endpoint', required: true },
+            symbols: { value: [] },
+            outputFormat: { value: 'object' }
+        },
+        inputs: 1,
+        outputs: 1,
+        icon: 's7complus.svg',
+        label: function () {
+            if (this.name) return this.name;
+            if (Array.isArray(this.symbols) && this.symbols.length) {
+                return this.symbols.length === 1
+                    ? ('S7+ Write ' + this.symbols[0].name)
+                    : ('S7+ Write [' + this.symbols.length + ']');
+            }
+            return 'S7+ Write';
+        },
+        labelStyle: function () {
+            return this.name ? 'node_label_italic' : '';
+        },
+        oneditprepare: function () {
+            const ctrl = window.s7complusSymListBuild('#node-input-out-symbols', '#s7complus-out-symbols-count');
+            const table = Array.isArray(this.symbols) ? this.symbols : [];
+            table.forEach(function (row) { ctrl.list.editableList('addItem', row); });
+            ctrl.refreshCount();
+            window.s7complusSymListWirePick('#s7complus-out-pick-btn', function () { return ctrl.list; }, ctrl.refreshCount);
+            window.s7complusPrepareOutputFormat(this);
+        },
+        oneditsave: function () {
+            this.symbols = window.s7complusSymListSerialize($('#node-input-out-symbols'));
+            window.s7complusSaveOutputFormat(this);
+        }
+    });
+</script>
+
+<script type="text/html" data-template-name="s7-plus explore">
+    <div class="form-row">
+        <label for="node-input-name"><i class="fa fa-tag"></i> Name</label>
+        <input type="text" id="node-input-name" placeholder="Name">
+    </div>
+    <div class="form-row">
+        <label for="node-input-endpoint"><i class="fa fa-server"></i> Endpoint</label>
+        <input type="text" id="node-input-endpoint">
+    </div>
+    <div class="form-row">
+        <label><i class="fa fa-filter"></i> Scope</label>
+        <button type="button" id="s7complus-explore-scope-btn" class="red-ui-button">
+            <i class="fa fa-check-square-o"></i> Explore scope
+        </button>
+        <span id="s7complus-explore-scope-summary" style="margin-left:8px;color:#888;"></span>
+    </div>
+    <div class="form-row">
+        <label for="node-input-symbolInfos"><i class="fa fa-info-circle"></i> Symbol infos</label>
+        <select id="node-input-symbolInfos">
+            <option value="none">None</option>
+            <option value="object">Object</option>
+            <option value="array">Array</option>
+        </select>
+    </div>
+    <div class="form-row">
+        <label for="node-input-maxSymbols"><i class="fa fa-list-ol"></i> Output limit</label>
+        <input type="number" id="node-input-maxSymbols" placeholder="100000" min="1">
+    </div>
+</script>
+
+<script type="text/html" data-help-name="s7-plus explore">
+    <p>Browses the PLC symbol tree via the configured <b>S7+ Endpoint</b> and returns a
+    <b>flat list</b> of symbol names in <code>msg.payload</code>. Use it to discover
+    symbols for the <b>S7+ Read</b> / <b>S7+ Write</b> nodes or to export a symbol list.
+    The node outputs names and optional metadata only — it does <b>not</b> read live values.</p>
+    <p>Which DBs and memory areas are browsed (<b>Explore scope</b>) and how many symbols
+    are returned (<b>Output limit</b>) are configured on the node; see <b>Details</b> and
+    <b>Inputs</b> for overrides. Only leaf symbols with datatypes supported for symbolic
+    access are included — the same kind you can pick with <b>Pick from PLC</b>. Any incoming
+    message triggers one browse.</p>
+
+    <h3>Inputs</h3>
+    <p>Any incoming message triggers a symbol browse using the settings on the node
+    (endpoint, explore scope, output limit, symbol infos). You do not need to set
+    <code>msg.payload</code> — an inject with an empty payload is enough:</p>
+    <pre>[inject] → [S7+ Explore]</pre>
+    <p>The optional properties below override the node configuration for <b>this message
+    only</b>. They can be combined. Unset properties keep the values from the editor.</p>
+    <dl class="message-properties">
+        <dt class="optional">maxSymbols <span class="property-type">number</span></dt>
+        <dd>Cap how many symbols are returned for this browse. Useful on large PLC programs
+        when you only need a sample, or to temporarily raise the limit beyond the value
+        set under <b>Output limit</b>.
+        Example: <code>msg.maxSymbols = 500;</code></dd>
+
+        <dt class="optional">exploreScope <span class="property-type">object</span></dt>
+        <dd>Limit which memory areas are browsed for this message. Same structure as the
+        <b>Explore scope</b> dialog on the node:
+        <ul>
+            <li><code>everything: true</code> — full symbol table (default when omitted, or
+            when both <code>dbs</code> and <code>areas</code> are empty).</li>
+            <li><code>everything: false</code> with <code>dbs</code> and/or <code>areas</code>
+            — only the listed data blocks and/or memory areas.</li>
+            <li><code>dbs</code> — array of DB names, e.g.
+            <code>["DB1", "RecipeData"]</code>.</li>
+            <li><code>areas</code> — array of area names:
+            <code>IArea</code>, <code>QArea</code>, <code>MArea</code>,
+            <code>S7Timers</code>, <code>S7Counters</code>.</li>
+        </ul>
+        Example — symbols in DB1 and the output area only:
+        <pre>msg.exploreScope = {
+  everything: false,
+  dbs: ["DB1"],
+  areas: ["QArea"]
+};</pre></dd>
+
+        <dt class="optional">symbolInfos <span class="property-type">string</span></dt>
+        <dd>Control whether metadata is included in <code>msg.infos</code> for this
+        message. Overrides the <b>Symbol infos</b> dropdown. Valid values:
+        <ul>
+            <li><code>"none"</code> — symbol names only in <code>msg.payload</code>
+            (smallest output).</li>
+            <li><code>"object"</code> — <code>msg.infos</code> keyed by symbol name.</li>
+            <li><code>"array"</code> — <code>msg.infos</code> in browse order, each entry
+            includes a <code>symbol</code> field.</li>
+        </ul>
+        Example: <code>msg.symbolInfos = "object";</code></dd>
+    </dl>
+    <p>Combine overrides in a <b>function</b> node, e.g. browse one DB with metadata
+    and a custom limit:</p>
+    <pre>msg.exploreScope = { everything: false, dbs: ["MotorData"], areas: [] };
+msg.symbolInfos = "array";
+msg.maxSymbols = 1000;
+return msg;</pre>
+
+    <h3>Outputs</h3>
+    <p>The <b>Symbol infos</b> option controls whether additional metadata is included
+    in <code>msg.infos</code>:</p>
+    <ul>
+        <li><b>None</b> (default) — only symbol names in <code>msg.payload</code>.</li>
+        <li><b>Object</b> — <code>msg.infos</code> is an object keyed by symbol name.</li>
+        <li><b>Array</b> — <code>msg.infos</code> is an array in the same order as
+        <code>msg.payload</code>, each entry includes a <code>symbol</code> field.</li>
+    </ul>
+    <dl class="message-properties">
+        <dt>payload <span class="property-type">string[]</span></dt>
+        <dd>Flat list of exported symbol names (one string per symbol in browse order).
+        Works directly with Split and filter nodes. To read these symbols with
+        <b>S7+ Read</b>, set <code>msg.addSymbols = msg.payload</code> in a
+        <b>function</b> or <b>change</b> node before the read node (merge with
+        configured symbols). For a full per-message override on Read, set
+        <code>msg.symbols</code> instead.</dd>
+
+        <dt class="optional">infos <span class="property-type">object | array</span></dt>
+        <dd>Additional metadata per symbol (datatype, access address, offsets, CRC).
+        Omitted when <b>Symbol infos</b> is set to <b>None</b>.</dd>
+
+        <dt>meta <span class="property-type">object</span></dt>
+        <dd>Summary with <code>dbCount</code>, <code>symbolCount</code>,
+        <code>durationMs</code>, <code>scope</code>, and when the output limit was hit:
+        <code>limitExceeded</code>, <code>maxSymbols</code>, <code>limitMessage</code>.</dd>
+    </dl>
+
+    <h3>Details</h3>
+    <p>This node does <b>not</b> read live values; it only lists the symbols. For reading or
+    writing values use the <b>S7+ Read</b> / <b>S7+ Write</b> nodes. For picking individual
+    symbols interactively, use the <b>Pick from PLC</b> button on those nodes.</p>
+    <p>A browse can take a moment on large PLC programs. While one browse is running, further
+    triggers on the same node are rejected.</p>
+    <p><b>Output limit</b> (default 100000) caps how many symbols are exported on a full browse.
+    When the PLC has more symbols, the first <code>maxSymbols</code> entries are still output
+    normally; the node status turns <b>yellow</b> and <code>msg.meta.limitExceeded</code>
+    is set to <code>true</code>. Override per message with <code>msg.maxSymbols</code>.</p>
+    <p><b>Explore scope</b> limits which memory areas are browsed. Use the
+    <b>Explore scope</b> button to select <b>Everything</b> (default), individual data blocks,
+    and/or areas (I, Q, M, timers, counters). When a partial scope is saved with nothing
+    selected, the node falls back to <b>Everything</b>. Override per message with
+    <code>msg.exploreScope</code>.</p>
+
+    <h3>Example</h3>
+    <p>Browse symbols on demand and inspect the result:</p>
+    <pre>[inject] → [S7+ Explore] → [debug msg.payload]</pre>
+    <p>Excerpt after browse (<b>Symbol infos</b> = Object):</p>
+    <pre>msg.payload = [
+  "Motor.speed",
+  "Tank.level"
+]
+
+msg.infos = {
+  "Motor.speed": {
+    "accessSequence": "8A0E0001.A",
+    "softdatatypeName": "Int",
+    "softdatatype": 6,
+    "optAddress": 0,
+    "nonOptAddress": 0,
+    "optBitoffset": 0,
+    "nonOptBitoffset": 0
+  }
+}
+
+msg.meta = {
+  "dbCount": 12,
+  "symbolCount": 100000,
+  "durationMs": 820,
+  "limitExceeded": true,
+  "maxSymbols": 100000,
+  "limitMessage": "Symbol limit exceeded (100000 exported, max 100000)"
+}</pre>
+</script>
+
+<script type="text/javascript">
+    RED.nodes.registerType('s7-plus explore', {
+        category: 'S7 Plus',
+        color: '#3FADB5',
+        paletteLabel: 'S7+ Explore',
+        defaults: {
+            name: { value: '' },
+            endpoint: { value: '', type: 's7-plus endpoint', required: true },
+            maxSymbols: { value: 100000, validate: RED.validators.number() },
+            exploreScope: { value: { everything: true, dbs: [], areas: [] } },
+            symbolInfos: { value: 'none' }
+        },
+        inputs: 1,
+        outputs: 1,
+        icon: 's7complus.svg',
+        label: function () {
+            return this.name || 'S7+ Explore';
+        },
+        labelStyle: function () {
+            return this.name ? 'node_label_italic' : '';
+        },
+        oneditprepare: function () {
+            $('#node-input-symbolInfos').val(this.symbolInfos || 'none');
+            const scope = window.s7complusNormalizeExploreScope(this.exploreScope);
+            window.s7complusExploreScopeDraft = scope;
+            $('#s7complus-explore-scope-summary').text(window.s7complusExploreScopeSummary(scope));
+            $('#s7complus-explore-scope-btn').on('click', function () {
+                const endpointId = $('#node-input-endpoint').val();
+                window.s7complusOpenExploreScopeDialog({
+                    context: window.s7complusEndpointBrowseContext(endpointId),
+                    scope: window.s7complusExploreScopeDraft,
+                    onSaved: function (saved) {
+                        window.s7complusExploreScopeDraft = saved;
+                        $('#s7complus-explore-scope-summary')
+                            .text(window.s7complusExploreScopeSummary(saved));
+                    }
+                });
+            });
+        },
+        oneditsave: function () {
+            this.symbolInfos = $('#node-input-symbolInfos').val() || 'none';
+            this.exploreScope = window.s7complusNormalizeExploreScope(window.s7complusExploreScopeDraft);
+        }
+    });
+</script>

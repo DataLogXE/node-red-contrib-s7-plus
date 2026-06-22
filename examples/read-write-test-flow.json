@@ -1,0 +1,172 @@
+[
+    {
+        "id": "rw_test_tab",
+        "type": "tab",
+        "label": "R/W Verification Test",
+        "disabled": false,
+        "info": "Automated read/write verification for all scalar datatypes in plc/s7-1500.\nPress the \"Run all R/W tests\" inject. The Test Runner writes every constant value of every datatype into the matching *_write tag, reads it back and compares write vs. read-back.\nThe run never aborts on a failure: it completes fully and emits one result per datatype (\"Datatype Result\") plus a final \"Summary\".\nDTL round-trips as Date (ms resolution).\nRegenerate with: node scripts/generate-rw-test-flow.js"
+    },
+    {
+        "id": "rw_test_hdr",
+        "type": "comment",
+        "z": "rw_test_tab",
+        "name": "R/W verification — write, read back and compare every scalar constant",
+        "info": "",
+        "x": 320,
+        "y": 40,
+        "wires": []
+    },
+    {
+        "id": "rw_test_start",
+        "type": "inject",
+        "z": "rw_test_tab",
+        "name": "Run all R/W tests",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 150,
+        "y": 140,
+        "wires": [
+            [
+                "rw_test_runner"
+            ]
+        ]
+    },
+    {
+        "id": "rw_test_runner",
+        "type": "function",
+        "z": "rw_test_tab",
+        "name": "Test Runner",
+        "func": "const TESTS = [\n    {\n        group: \"Binary\",\n        datatype: \"Bool\",\n        symbol: \"DB_Binary.Bool_write\",\n        cases: [\n            { name: \"Bool_False\", value: false },\n            { name: \"Bool_True\", value: true }\n        ]\n    },\n    {\n        group: \"BitStrings\",\n        datatype: \"Byte\",\n        symbol: \"DB_BitStrings.Byte_write\",\n        cases: [\n            { name: \"Byte_Min_0x00\", value: 0 },\n            { name: \"Byte_Max_0xFF\", value: 255 },\n            { name: \"Byte_0xAB\", value: 171 }\n        ]\n    },\n    {\n        group: \"BitStrings\",\n        datatype: \"Word\",\n        symbol: \"DB_BitStrings.Word_write\",\n        cases: [\n            { name: \"Word_Min_0x0000\", value: 0 },\n            { name: \"Word_Max_0xFFFF\", value: 65535 },\n            { name: \"Word_0xCAFE\", value: 51966 }\n        ]\n    },\n    {\n        group: \"BitStrings\",\n        datatype: \"DWord\",\n        symbol: \"DB_BitStrings.DWord_write\",\n        cases: [\n            { name: \"DWord_Min_0x00000000\", value: 0 },\n            { name: \"DWord_Max_0xFFFFFFFF\", value: 4294967295 },\n            { name: \"DWord_0xCAFEBABE\", value: 3405691582 }\n        ]\n    },\n    {\n        group: \"BitStrings\",\n        datatype: \"LWord\",\n        symbol: \"DB_BitStrings.LWord_write\",\n        cases: [\n            { name: \"LWord_Min_0x0000000000000000\", value: 0n },\n            { name: \"LWord_Max_0xFFFFFFFFFFFFFFFF\", value: 0xFFFFFFFFFFFFFFFFn },\n            { name: \"LWord_0x12345678ABCDEFAB\", value: 0x12345678ABCDEFABn }\n        ]\n    },\n    {\n        group: \"CharacterStrings\",\n        datatype: \"Char\",\n        symbol: \"DB_CharacterStrings.Char_write\",\n        cases: [\n            { name: \"Char_Space\", value: \" \" },\n            { name: \"Char_A\", value: \"A\" },\n            { name: \"Char_auml\", value: \"ä\" }\n        ]\n    },\n    {\n        group: \"CharacterStrings\",\n        datatype: \"String\",\n        symbol: \"DB_CharacterStrings.String_write\",\n        cases: [\n            { name: \"String_Empty\", value: \"\" },\n            { name: \"String_Hello_World\", value: \"Hello World\" },\n            { name: \"String_Moumltoumlrhead\", value: \"Mötörhead\" },\n            { name: \"String_Len4_Test\", value: \"Test\" }\n        ]\n    },\n    {\n        group: \"CharacterStrings\",\n        datatype: \"WChar\",\n        symbol: \"DB_CharacterStrings.WChar_write\",\n        cases: [\n            { name: \"WChar_Space\", value: \" \" },\n            { name: \"WChar_auml\", value: \"ä\" },\n            { name: \"WChar_X\", value: \"X\" },\n            { name: \"WChar_GreekSigmaBig\", value: \"Ʃ\" }\n        ]\n    },\n    {\n        group: \"CharacterStrings\",\n        datatype: \"WString\",\n        symbol: \"DB_CharacterStrings.WString_write\",\n        cases: [\n            { name: \"WString_Empty\", value: \"\" },\n            { name: \"WString_Moumltoumlrhead\", value: \"Mötörhead\" },\n            { name: \"WString_Greek1\", value: \"Test Greek ΣΛΔ end.\" },\n            { name: \"WString_Len4_Test\", value: \"Test\" }\n        ]\n    },\n    {\n        group: \"Integers\",\n        datatype: \"SInt\",\n        symbol: \"DB_Integers.SInt_write\",\n        cases: [\n            { name: \"SInt_Min_n128\", value: -128 },\n            { name: \"SInt_Max_127\", value: 127 },\n            { name: \"SInt_123\", value: 123 },\n            { name: \"SInt_n123\", value: -123 }\n        ]\n    },\n    {\n        group: \"Integers\",\n        datatype: \"Int\",\n        symbol: \"DB_Integers.Int_write\",\n        cases: [\n            { name: \"Int_Min_n32768\", value: -32768 },\n            { name: \"Int_Max_32767\", value: 32767 },\n            { name: \"Int_12345\", value: 12345 },\n            { name: \"Int_n9876\", value: -9876 }\n        ]\n    },\n    {\n        group: \"Integers\",\n        datatype: \"DInt\",\n        symbol: \"DB_Integers.DInt_write\",\n        cases: [\n            { name: \"DInt_Min_n2147483648\", value: -2147483648 },\n            { name: \"DInt_Max_2147483647\", value: 2147483647 },\n            { name: \"DInt_1234567890\", value: 1234567890 },\n            { name: \"DInt_n987654321\", value: -987654321 }\n        ]\n    },\n    {\n        group: \"Integers\",\n        datatype: \"USInt\",\n        symbol: \"DB_Integers.USInt_write\",\n        cases: [\n            { name: \"USint_Min_0\", value: 0 },\n            { name: \"USInt_Max_255\", value: 255 },\n            { name: \"USInt_123\", value: 123 }\n        ]\n    },\n    {\n        group: \"Integers\",\n        datatype: \"UInt\",\n        symbol: \"DB_Integers.UInt_write\",\n        cases: [\n            { name: \"UInt_Min_0\", value: 0 },\n            { name: \"UInt_Max_65535\", value: 65535 },\n            { name: \"UInt_12345\", value: 12345 }\n        ]\n    },\n    {\n        group: \"Integers\",\n        datatype: \"UDInt\",\n        symbol: \"DB_Integers.UDInt_write\",\n        cases: [\n            { name: \"UDInt_Min_0\", value: 0 },\n            { name: \"UDInt_Max_4294967295\", value: 4294967295 },\n            { name: \"UDint_1234567890\", value: 1234567890 }\n        ]\n    },\n    {\n        group: \"Integers\",\n        datatype: \"LInt\",\n        symbol: \"DB_Integers.LInt_write\",\n        cases: [\n            { name: \"LInt_Min_n9223372036854775808\", value: -9223372036854775808n },\n            { name: \"LInt_Max_9223372036854775807\", value: 9223372036854775807n },\n            { name: \"LInt_1234567890123456789\", value: 1234567890123456789n },\n            { name: \"LInt_n987654321098765432\", value: -987654321098765432n }\n        ]\n    },\n    {\n        group: \"Integers\",\n        datatype: \"ULInt\",\n        symbol: \"DB_Integers.ULInt_write\",\n        cases: [\n            { name: \"ULInt_Min_0\", value: 0n },\n            { name: \"ULInt_Max_18446744073709551615\", value: 18446744073709551615n },\n            { name: \"ULInt_12345678901234567890\", value: 12345678901234567890n }\n        ]\n    },\n    {\n        group: \"FloatingPoint\",\n        datatype: \"Real\",\n        symbol: \"DB_FloatingPoint.Real_write\",\n        cases: [\n            { name: \"Real_MinNeg_n3d402823e38\", value: -3.402823E+38 },\n            { name: \"Real_MaxNeg_n1d175495en38\", value: -1.175495E-38 },\n            { name: \"Real_MinPos_1d175495en38\", value: 1.175495E-38 },\n            { name: \"Real_MaxPos_3d402823e38\", value: 3.402823E+38 },\n            { name: \"Real_0d0\", value: 0 },\n            { name: \"Real_987d125\", value: 987.125 },\n            { name: \"Real_n123d5\", value: -123.5 }\n        ]\n    },\n    {\n        group: \"FloatingPoint\",\n        datatype: \"LReal\",\n        symbol: \"DB_FloatingPoint.LReal_write\",\n        cases: [\n            { name: \"LReal_MinNeg_n1d7976931348623157e308\", value: -1.7976931348623157E+308 },\n            { name: \"LReal_MaxNeg_n2d2250738585072014en308\", value: -2.2250738585072014E-308 },\n            { name: \"LReal_MinPos_2d2250738585072014en308\", value: 2.2250738585072014E-308 },\n            { name: \"LReal_MaxPos_1d7976931348623157e308\", value: 1.7976931348623157E+308 },\n            { name: \"LReal_0d0\", value: 0 },\n            { name: \"LReal_987d125\", value: 987.125 },\n            { name: \"LReal_n123d5\", value: -123.5 },\n            { name: \"LReal_1d23456789012346e18\", value: 1.23456789012346E+18 }\n        ]\n    },\n    {\n        group: \"DateAndTime\",\n        datatype: \"Date\",\n        symbol: \"DB_DateAndTime.Date_write\",\n        cases: [\n            { name: \"Date_Min_1990_01_01\", value: new Date(1990, 0, 1) },\n            { name: \"Date_Max_2169_06_06\", value: new Date(2169, 5, 6) },\n            { name: \"Date_2023_10_28\", value: new Date(2023, 9, 28) },\n            { name: \"Date_1990_02_03\", value: new Date(1990, 1, 3) }\n        ]\n    },\n    {\n        group: \"DateAndTime\",\n        datatype: \"TimeOfDay\",\n        symbol: \"DB_DateAndTime.Time_Of_Day_write\",\n        cases: [\n            { name: \"Time_Of_Day_Min_00_00_00d000\", value: 0 },\n            { name: \"Time_Of_Day_Max_23_59_59d999\", value: 86399999 },\n            { name: \"Time_Of_Day_01_02_03\", value: 3723000 },\n            { name: \"Time_Of_Day_23_58_59\", value: 86339000 },\n            { name: \"Time_Of_Day_12_13_14d123\", value: 43994123 }\n        ]\n    },\n    {\n        group: \"DateAndTime\",\n        datatype: \"DateAndTime\",\n        symbol: \"DB_DateAndTime.Date_And_Time_write\",\n        cases: [\n            { name: \"Date_And_Time_Min_1990_01_01_00_00_00\", value: new Date(Date.UTC(1990, 0, 1, 0, 0, 0, 0)) },\n            { name: \"Date_And_Time_Max_2089_12_31_23_59_59d999\", value: new Date(Date.UTC(2089, 11, 31, 23, 59, 59, 999)) },\n            { name: \"Date_And_Time_2023_10_28_23_58_59d123\", value: new Date(Date.UTC(2023, 9, 28, 23, 58, 59, 123)) }\n        ]\n    },\n    {\n        group: \"DateAndTime\",\n        datatype: \"LTod\",\n        symbol: \"DB_DateAndTime.LTOD_write\",\n        cases: [\n            { name: \"LTOD_Min_00_00_00d000000000\", value: 0n },\n            { name: \"LTOD_Max_23_59_59d999999999\", value: 86399999999999n },\n            { name: \"LTOD_10_20_30d400365215\", value: 37230400365215n }\n        ]\n    },\n    {\n        group: \"DateAndTime\",\n        datatype: \"Ldt\",\n        symbol: \"DB_DateAndTime.LDT_write\",\n        cases: [\n            { name: \"LDT_Min_1970_01_01_00_00_00d000000000\", value: new Date(0) },\n            { name: \"LDT_Max_2262_04_11_23_47_16d854775807\", value: new Date(Date.UTC(2262, 3, 11, 23, 47, 16, 854)) },\n            { name: \"LDT_2008_10_25_08_12_34d567\", value: new Date(Date.UTC(2008, 9, 25, 8, 12, 34, 567)) }\n        ]\n    },\n    {\n        group: \"DateAndTime\",\n        datatype: \"Dtl\",\n        symbol: \"DB_DateAndTime.DTL_write\",\n        cases: [\n            { name: \"DTL_Min_1970_01_01_00_00_00d000000000\", value: new Date(0) },\n            { name: \"DTL_Max_2262_04_11_23_47_16d854775807\", value: new Date(Date.UTC(2262, 3, 11, 23, 47, 16, 854)) },\n            { name: \"DTL_2008_10_25_08_12_34d567\", value: new Date(Date.UTC(2008, 9, 25, 8, 12, 34, 567)) }\n        ]\n    },\n    {\n        group: \"Timers\",\n        datatype: \"Time\",\n        symbol: \"DB_Timers.Time_write\",\n        cases: [\n            { name: \"Time_Min_n24D_20H_31M_23S_648MS\", value: -2147483648 },\n            { name: \"Time_Max_24D_20H_31M_23S_647MS\", value: 2147483647 },\n            { name: \"Time_12S_345MS\", value: 12345 },\n            { name: \"Time_n20M_34S\", value: -1234000 }\n        ]\n    },\n    {\n        group: \"Timers\",\n        datatype: \"S5Time\",\n        symbol: \"DB_Timers.S5Time_write\",\n        cases: [\n            { name: \"S5Time_Min_0MS\", value: 0 },\n            { name: \"S5Time_Max_2H46M30S\", value: 9990000 },\n            { name: \"S5Time_120MS\", value: 120 },\n            { name: \"S5Time_12S300MS\", value: 12300 }\n        ]\n    },\n    {\n        group: \"Timers\",\n        datatype: \"LTime\",\n        symbol: \"DB_Timers.LTime_write\",\n        cases: [\n            { name: \"LTime_Min_n106751D_23H_47M_16S_854MS_775US_808NS\", value: -9223372036854775808n },\n            { name: \"LTime_Max_106751D_23H_47M_16S_854MS_775US_807NS\", value: 9223372036854775807n },\n            { name: \"LTime_12S345NS\", value: 12000000345n },\n            { name: \"LTime_n12H_345US\", value: -43200000345000n },\n            { name: \"LTime_23H_456US\", value: 82800000456000n }\n        ]\n    }\n];\n\n// ---- comparators (read-back value vs. expected) ----\nvar eq = function (e, r) { return r === e; };\nvar bigeq = function (e, r) {\n    try { return (typeof r === 'bigint' ? r : BigInt(r)) === (typeof e === 'bigint' ? e : BigInt(e)); }\n    catch (_) { return false; }\n};\nvar realeq = function (e, r) { return typeof r === 'number' && r === Math.fround(e); };\nvar lrealeq = function (e, r) { return r === e || (Number.isNaN(e) && Number.isNaN(r)); };\n// Duck-type the Date (getTime) instead of using instanceof, so the comparison\n// is robust even if the read-back Date crosses a vm realm boundary into the\n// function-node sandbox (where instanceof Date can be false).\nvar dateeq = function (e, r) {\n    var te = e && typeof e.getTime === 'function' ? e.getTime() : Date.parse(e);\n    var tr = r && typeof r.getTime === 'function' ? r.getTime() : Date.parse(r);\n    return !isNaN(te) && te === tr;\n};\n\nvar COMPARATORS = {\n    Bool: eq,\n    Byte: eq, Word: eq, DWord: eq, LWord: bigeq,\n    SInt: eq, Int: eq, DInt: eq, USInt: eq, UInt: eq, UDInt: eq,\n    LInt: bigeq, ULInt: bigeq,\n    Real: realeq, LReal: lrealeq,\n    Char: eq, WChar: eq, String: eq, WString: eq,\n    Date: dateeq, DateAndTime: dateeq, Ldt: dateeq, Dtl: dateeq,\n    TimeOfDay: eq, Time: eq, S5Time: eq,\n    LTod: bigeq, LTime: bigeq\n};\n\nfunction show(v) {\n    if (typeof v === 'bigint') return v.toString();\n    if (v && typeof v.toISOString === 'function') return v.toISOString();\n    return v;\n}\n\nfunction tagResult(payload, symbol) {\n    if (!payload || typeof payload !== 'object') return null;\n    if (payload[symbol]) return payload[symbol];\n    var keys = Object.keys(payload);\n    return keys.length ? payload[keys[0]] : null;\n}\n\nfunction newAcc() { return { passed: 0, failed: 0, cases: [] }; }\n\nfunction buildWriteMsg(S) {\n    var t = TESTS[S.di];\n    var c = t.cases[S.ci];\n    return {\n        _t: { phase: 'write', di: S.di, ci: S.ci },\n        symbols: [t.symbol],\n        datatype: t.datatype,\n        payload: c.value\n    };\n}\n\nfunction buildReadMsg(S) {\n    var t = TESTS[S.di];\n    return {\n        _t: { phase: 'read', di: S.di, ci: S.ci },\n        symbols: [t.symbol],\n        payload: ''\n    };\n}\n\nfunction record(S, t, c, ok, wrote, read, error) {\n    S.cur.cases.push({\n        name: c.name,\n        ok: ok,\n        wrote: show(wrote),\n        read: read === null || read === undefined ? null : show(read),\n        error: error || ''\n    });\n    if (ok) { S.cur.passed++; S.totalPassed++; } else { S.cur.failed++; S.totalFailed++; }\n    S.totalCases++;\n}\n\n// Advance to the next case; emit a per-datatype result when a datatype is\n// finished and a final summary when all datatypes are done.\nfunction advance(S) {\n    var t = TESTS[S.di];\n    S.ci++;\n    if (S.ci < t.cases.length) {\n        context.set('state', S);\n        return [buildWriteMsg(S), null, null, null];\n    }\n\n    var result = {\n        topic: t.group + '/' + t.datatype,\n        payload: {\n            group: t.group,\n            datatype: t.datatype,\n            symbol: t.symbol,\n            total: t.cases.length,\n            passed: S.cur.passed,\n            failed: S.cur.failed,\n            cases: S.cur.cases\n        }\n    };\n    S.results.push({ group: t.group, datatype: t.datatype, total: t.cases.length, passed: S.cur.passed, failed: S.cur.failed });\n    node.status({ fill: S.cur.failed ? 'yellow' : 'green', shape: 'dot', text: t.datatype + ': ' + S.cur.passed + '/' + t.cases.length + ' ok' });\n\n    S.di++;\n    S.ci = 0;\n    if (S.di < TESTS.length) {\n        S.cur = newAcc();\n        context.set('state', S);\n        return [buildWriteMsg(S), null, result, null];\n    }\n\n    S.running = false;\n    context.set('state', S);\n    var summary = {\n        topic: 'SUMMARY',\n        payload: {\n            totalDatatypes: TESTS.length,\n            totalCases: S.totalCases,\n            passed: S.totalPassed,\n            failed: S.totalFailed,\n            failures: S.results.filter(function (r) { return r.failed > 0; })\n        }\n    };\n    node.status({ fill: S.totalFailed ? 'red' : 'green', shape: 'dot', text: 'done: ' + S.totalPassed + '/' + S.totalCases + ' ok' });\n    return [null, null, result, summary];\n}\n\nvar S = context.get('state');\n\n// Start trigger (inject): no _t marker.\nif (!msg || !msg._t) {\n    if (S && S.running) {\n        node.warn('R/W test already running, ignoring start trigger');\n        return null;\n    }\n    S = {\n        running: true,\n        di: 0,\n        ci: 0,\n        cur: newAcc(),\n        results: [],\n        totalCases: 0,\n        totalPassed: 0,\n        totalFailed: 0\n    };\n    context.set('state', S);\n    node.status({ fill: 'blue', shape: 'dot', text: 'running...' });\n    return [buildWriteMsg(S), null, null, null];\n}\n\n// Stray feedback (e.g. after a completed run) is ignored.\nif (!S || !S.running) {\n    return null;\n}\n\nvar t = TESTS[S.di];\nvar c = t.cases[S.ci];\nvar phase = msg._t.phase;\nvar errText = msg.error && msg.error.message ? msg.error.message : null;\n\nif (phase === 'write') {\n    var wr = tagResult(msg.payload, t.symbol);\n    if (errText || !wr || wr.status !== 'ok') {\n        record(S, t, c, false, c.value, null, errText || (wr && wr.error) || 'write failed');\n        return advance(S);\n    }\n    // write ok -> read the same tag back\n    return [null, buildReadMsg(S), null, null];\n}\n\nif (phase === 'read') {\n    var rd = tagResult(msg.payload, t.symbol);\n    if (errText || !rd || rd.status !== 'ok') {\n        record(S, t, c, false, c.value, null, errText || (rd && rd.error) || 'read failed');\n        return advance(S);\n    }\n    var cmp = COMPARATORS[t.datatype] || eq;\n    var ok = cmp(c.value, rd.value);\n    var note = ok ? '' : 'value mismatch';\n    record(S, t, c, ok, c.value, rd.value, note);\n    return advance(S);\n}\n\nreturn null;\n",
+        "outputs": 4,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 410,
+        "y": 140,
+        "wires": [
+            [
+                "rw_test_write"
+            ],
+            [
+                "rw_test_read"
+            ],
+            [
+                "rw_test_dbg_result"
+            ],
+            [
+                "rw_test_dbg_summary"
+            ]
+        ]
+    },
+    {
+        "id": "rw_test_write",
+        "type": "s7-plus write",
+        "z": "rw_test_tab",
+        "name": "write *_write",
+        "endpoint": "example_plc_ep",
+        "symbols": [],
+        "outputFormat": "object",
+        "x": 690,
+        "y": 100,
+        "wires": [
+            [
+                "rw_test_runner"
+            ]
+        ]
+    },
+    {
+        "id": "rw_test_read",
+        "type": "s7-plus read",
+        "z": "rw_test_tab",
+        "name": "read *_write",
+        "endpoint": "example_plc_ep",
+        "symbols": [],
+        "outputFormat": "object",
+        "x": 690,
+        "y": 180,
+        "wires": [
+            [
+                "rw_test_runner"
+            ]
+        ]
+    },
+    {
+        "id": "rw_test_catch",
+        "type": "catch",
+        "z": "rw_test_tab",
+        "name": "write/read errors",
+        "scope": [
+            "rw_test_write",
+            "rw_test_read"
+        ],
+        "uncaught": false,
+        "x": 410,
+        "y": 260,
+        "wires": [
+            [
+                "rw_test_runner"
+            ]
+        ]
+    },
+    {
+        "id": "rw_test_dbg_result",
+        "type": "debug",
+        "z": "rw_test_tab",
+        "name": "Datatype Result",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 720,
+        "y": 280,
+        "wires": []
+    },
+    {
+        "id": "rw_test_dbg_summary",
+        "type": "debug",
+        "z": "rw_test_tab",
+        "name": "Summary",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 700,
+        "y": 340,
+        "wires": []
+    },
+    {
+        "id": "example_plc_ep",
+        "type": "s7-plus endpoint",
+        "name": "PLC",
+        "address": "192.168.0.1",
+        "timeout": 10000
+    },
+    {
+        "id": "69768f9f5a51add5",
+        "type": "global-config",
+        "env": [],
+        "modules": {
+            "node-red-contrib-s7-plus": "0.0.1"
+        }
+    }
+]

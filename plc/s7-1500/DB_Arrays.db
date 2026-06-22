@@ -1,0 +1,17 @@
+﻿DATA_BLOCK "DB_Arrays"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+NON_RETAIN
+   VAR 
+      SInt_array1000 : Array[1..1000] of SInt;   // SInt: Array with 10000 items
+      Int_array1000 : Array[1..1000] of Int;   // Int: Array with 10000 items
+      DInt_array1000 : Array[1..1000] of DInt;   // DInt: Array with 10000 items
+      Real_array1000 : Array[1..1000] of Real;   // Real: Array with 10000 items
+      LReal_array1000 : Array[1..1000] of LReal;   // LReal: Array with 10000 items
+   END_VAR
+
+
+BEGIN
+
+END_DATA_BLOCK
+
