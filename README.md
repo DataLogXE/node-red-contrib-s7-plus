@@ -1,13 +1,8 @@
 # node-red-contrib-s7-plus
 
-> **Full symbolic access to Siemens S7-1200/1500 PLCs in Node-RED** — pick tags straight from the live PLC, no byte/offset math, no manual data types.
+Node-RED nodes for symbolic read/write access to Siemens S7-1200/1500 PLCs over the native **S7CommPlus** protocol.
 
-[npm version](https://www.npmjs.com/package/node-red-contrib-s7-plus)
-[license](LICENSE)
-[Node.js](https://nodejs.org/)
-[Node-RED](https://nodered.org/)
-
-Node-RED nodes for symbolic read/write access to Siemens S7-1200/1500 PLCs over the native **S7CommPlus** protocol (ISO-on-TCP, TLS 1.3).
+Maintained by [DataLogXE](https://github.com/DataLogXE).
 
 ## Why this package
 
@@ -136,7 +131,7 @@ node scripts/generate-rw-test-flow.js
 
 ## License
 
-LGPL-3.0-or-later. See [LICENSE](LICENSE).
+Copyright (C) 2026 Robert Mederer - [DataLogXE](https://github.com/DataLogXE). Licensed under LGPL-3.0-or-later. See [LICENSE](LICENSE).
 
 This project builds on the following work:
 

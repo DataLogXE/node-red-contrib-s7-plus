@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-06-24
+
+### Changed
+
+- README: add DataLogXE maintainer note and copyright attribution.
+
 ## [0.1.0] - 2026-06-22
 
 ### Added
@@ -21,5 +27,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Example flows in `examples/`: read multiple values, write single values and automated read/write verification.
 - PLC test data block sources in `plc/s7-1500/` and generator scripts in `scripts/`.
 
-[Unreleased]: https://github.com/DataLogXE/node-red-contrib-s7-plus/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/DataLogXE/node-red-contrib-s7-plus/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/DataLogXE/node-red-contrib-s7-plus/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/DataLogXE/node-red-contrib-s7-plus/releases/tag/v0.1.0
