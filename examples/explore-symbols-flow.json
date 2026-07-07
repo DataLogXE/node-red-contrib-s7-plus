@@ -1,0 +1,681 @@
+[
+    {
+        "id": "explore_tab",
+        "type": "tab",
+        "label": "Explore Symbols",
+        "disabled": false,
+        "info": "S7+ Explore browses the PLC symbol tree and returns flat symbol names in msg.payload (no live values).\n\nRequires the test DBs from plc/s7-1500/ on the PLC with symbolic access enabled.\n\n1) Full catalog browse with msg.meta summary.\n2) Static explore scope: DB_TestSignals configured on the node.\n3) Dynamic scope via msg.exploreScope (DB_Binary or QArea).\n4) Symbol metadata in msg.infos (object and array formats).\n5) Output limit demo (msg.maxSymbols) and Explore → Read pipeline for DB_TestSignals.\n\nSet the PLC IP on the shared S7+ Endpoint config node (PLC) and deploy. Enable debug nodes as needed — full browse payloads can be large."
+    },
+    {
+        "id": "exp_hdr",
+        "type": "comment",
+        "z": "explore_tab",
+        "name": "Explore — browse the PLC symbol catalog (names only, no values)",
+        "info": "",
+        "x": 310,
+        "y": 40,
+        "wires": []
+    },
+    {
+        "id": "exp_sec1_comment",
+        "type": "comment",
+        "z": "explore_tab",
+        "name": "1) Full browse: everything scope, symbol names in msg.payload",
+        "info": "Node status turns yellow when msg.meta.limitExceeded is true on large programs.",
+        "x": 290,
+        "y": 100,
+        "wires": []
+    },
+    {
+        "id": "exp_inject_all",
+        "type": "inject",
+        "z": "explore_tab",
+        "name": "Browse all symbols",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 150,
+        "y": 160,
+        "wires": [
+            [
+                "exp_explore_all"
+            ]
+        ]
+    },
+    {
+        "id": "exp_explore_all",
+        "type": "s7-plus explore",
+        "z": "explore_tab",
+        "name": "explore (everything)",
+        "endpoint": "example_plc_ep",
+        "exploreScope": {
+            "everything": true,
+            "dbs": [],
+            "areas": []
+        },
+        "symbolInfos": "none",
+        "maxSymbols": 100000,
+        "x": 390,
+        "y": 160,
+        "wires": [
+            [
+                "exp_debug_all_payload",
+                "exp_fn_meta"
+            ]
+        ]
+    },
+    {
+        "id": "exp_debug_all_payload",
+        "type": "debug",
+        "z": "explore_tab",
+        "name": "All symbol names",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 650,
+        "y": 140,
+        "wires": []
+    },
+    {
+        "id": "exp_fn_meta",
+        "type": "function",
+        "z": "explore_tab",
+        "name": "Browse summary",
+        "func": "const m = msg.meta || {};\n\nmsg.payload = {\n    symbolCount: m.symbolCount,\n    dbCount: m.dbCount,\n    durationMs: m.durationMs,\n    limitExceeded: m.limitExceeded,\n    maxSymbols: m.maxSymbols,\n    limitMessage: m.limitMessage\n};\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 620,
+        "y": 200,
+        "wires": [
+            [
+                "exp_debug_meta"
+            ]
+        ]
+    },
+    {
+        "id": "exp_debug_meta",
+        "type": "debug",
+        "z": "explore_tab",
+        "name": "Browse summary",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "payload.symbolCount",
+        "statusType": "msg",
+        "x": 830,
+        "y": 200,
+        "wires": []
+    },
+    {
+        "id": "exp_sec2_comment",
+        "type": "comment",
+        "z": "explore_tab",
+        "name": "2) Static scope: DB_TestSignals configured on the explore node",
+        "info": "",
+        "x": 290,
+        "y": 280,
+        "wires": []
+    },
+    {
+        "id": "exp_inject_scoped",
+        "type": "inject",
+        "z": "explore_tab",
+        "name": "Browse DB_TestSignals",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 160,
+        "y": 340,
+        "wires": [
+            [
+                "exp_explore_scoped"
+            ]
+        ]
+    },
+    {
+        "id": "exp_explore_scoped",
+        "type": "s7-plus explore",
+        "z": "explore_tab",
+        "name": "explore DB_TestSignals",
+        "endpoint": "example_plc_ep",
+        "exploreScope": {
+            "everything": false,
+            "dbs": [
+                "DB_TestSignals"
+            ],
+            "areas": []
+        },
+        "symbolInfos": "none",
+        "maxSymbols": 100000,
+        "x": 400,
+        "y": 340,
+        "wires": [
+            [
+                "exp_debug_scoped"
+            ]
+        ]
+    },
+    {
+        "id": "exp_debug_scoped",
+        "type": "debug",
+        "z": "explore_tab",
+        "name": "DB_TestSignals symbols",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "payload.length",
+        "statusType": "msg",
+        "x": 660,
+        "y": 340,
+        "wires": []
+    },
+    {
+        "id": "exp_sec3_comment",
+        "type": "comment",
+        "z": "explore_tab",
+        "name": "3) Dynamic scope: msg.exploreScope overrides node config",
+        "info": "Both injects share one explore node with default everything scope.",
+        "x": 280,
+        "y": 420,
+        "wires": []
+    },
+    {
+        "id": "exp_inject_binary",
+        "type": "inject",
+        "z": "explore_tab",
+        "name": "Browse DB_Binary (runtime)",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 170,
+        "y": 480,
+        "wires": [
+            [
+                "exp_fn_scope_binary"
+            ]
+        ]
+    },
+    {
+        "id": "exp_fn_scope_binary",
+        "type": "function",
+        "z": "explore_tab",
+        "name": "Scope DB_Binary",
+        "func": "msg.exploreScope = {\n    everything: false,\n    dbs: [\"DB_Binary\"],\n    areas: []\n};\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 400,
+        "y": 480,
+        "wires": [
+            [
+                "exp_explore_dynamic"
+            ]
+        ]
+    },
+    {
+        "id": "exp_inject_qarea",
+        "type": "inject",
+        "z": "explore_tab",
+        "name": "Browse QArea only",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 150,
+        "y": 540,
+        "wires": [
+            [
+                "exp_fn_scope_qarea"
+            ]
+        ]
+    },
+    {
+        "id": "exp_fn_scope_qarea",
+        "type": "function",
+        "z": "explore_tab",
+        "name": "Scope QArea",
+        "func": "msg.exploreScope = {\n    everything: false,\n    dbs: [],\n    areas: [\"QArea\"]\n};\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 390,
+        "y": 540,
+        "wires": [
+            [
+                "exp_explore_dynamic"
+            ]
+        ]
+    },
+    {
+        "id": "exp_explore_dynamic",
+        "type": "s7-plus explore",
+        "z": "explore_tab",
+        "name": "explore (runtime scope)",
+        "endpoint": "example_plc_ep",
+        "exploreScope": {
+            "everything": true,
+            "dbs": [],
+            "areas": []
+        },
+        "symbolInfos": "none",
+        "maxSymbols": 100000,
+        "x": 640,
+        "y": 510,
+        "wires": [
+            [
+                "exp_debug_dynamic"
+            ]
+        ]
+    },
+    {
+        "id": "exp_debug_dynamic",
+        "type": "debug",
+        "z": "explore_tab",
+        "name": "Runtime scope symbols",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "payload.length",
+        "statusType": "msg",
+        "x": 880,
+        "y": 510,
+        "wires": []
+    },
+    {
+        "id": "exp_sec4_comment",
+        "type": "comment",
+        "z": "explore_tab",
+        "name": "4) Symbol infos: msg.infos metadata (object and array formats)",
+        "info": "Includes accessSequence, softdatatypeName, and address offsets — not live values.",
+        "x": 310,
+        "y": 620,
+        "wires": []
+    },
+    {
+        "id": "exp_inject_infos_obj",
+        "type": "inject",
+        "z": "explore_tab",
+        "name": "Browse with object infos",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 170,
+        "y": 680,
+        "wires": [
+            [
+                "exp_explore_obj"
+            ]
+        ]
+    },
+    {
+        "id": "exp_explore_obj",
+        "type": "s7-plus explore",
+        "z": "explore_tab",
+        "name": "explore (object infos)",
+        "endpoint": "example_plc_ep",
+        "exploreScope": {
+            "everything": false,
+            "dbs": [
+                "DB_TestSignals"
+            ],
+            "areas": []
+        },
+        "symbolInfos": "object",
+        "maxSymbols": 100000,
+        "x": 420,
+        "y": 680,
+        "wires": [
+            [
+                "exp_debug_infos_payload",
+                "exp_debug_infos_obj"
+            ]
+        ]
+    },
+    {
+        "id": "exp_debug_infos_payload",
+        "type": "debug",
+        "z": "explore_tab",
+        "name": "Object: symbol names",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 690,
+        "y": 660,
+        "wires": []
+    },
+    {
+        "id": "exp_debug_infos_obj",
+        "type": "debug",
+        "z": "explore_tab",
+        "name": "Object: msg.infos",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "infos",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 680,
+        "y": 720,
+        "wires": []
+    },
+    {
+        "id": "exp_inject_infos_arr",
+        "type": "inject",
+        "z": "explore_tab",
+        "name": "Browse with array infos",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 170,
+        "y": 800,
+        "wires": [
+            [
+                "exp_fn_infos_array"
+            ]
+        ]
+    },
+    {
+        "id": "exp_fn_infos_array",
+        "type": "function",
+        "z": "explore_tab",
+        "name": "Array infos + scope",
+        "func": "msg.exploreScope = {\n    everything: false,\n    dbs: [\"DB_TestSignals\"],\n    areas: []\n};\nmsg.symbolInfos = \"array\";\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 410,
+        "y": 800,
+        "wires": [
+            [
+                "exp_explore_arr"
+            ]
+        ]
+    },
+    {
+        "id": "exp_explore_arr",
+        "type": "s7-plus explore",
+        "z": "explore_tab",
+        "name": "explore (array infos)",
+        "endpoint": "example_plc_ep",
+        "exploreScope": {
+            "everything": true,
+            "dbs": [],
+            "areas": []
+        },
+        "symbolInfos": "none",
+        "maxSymbols": 100000,
+        "x": 640,
+        "y": 800,
+        "wires": [
+            [
+                "exp_debug_infos_arr"
+            ]
+        ]
+    },
+    {
+        "id": "exp_debug_infos_arr",
+        "type": "debug",
+        "z": "explore_tab",
+        "name": "Array: msg.infos[0]",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "infos[0]",
+        "targetType": "msg",
+        "statusVal": "infos[0].softdatatypeName",
+        "statusType": "msg",
+        "x": 880,
+        "y": 800,
+        "wires": []
+    },
+    {
+        "id": "exp_sec5_comment",
+        "type": "comment",
+        "z": "explore_tab",
+        "name": "5) Output limit and Explore → Read pipeline",
+        "info": "msg.maxSymbols caps the browse; msg.symbols from the result feeds an empty read node.",
+        "x": 260,
+        "y": 880,
+        "wires": []
+    },
+    {
+        "id": "exp_inject_limit",
+        "type": "inject",
+        "z": "explore_tab",
+        "name": "Browse limit + read back",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 170,
+        "y": 940,
+        "wires": [
+            [
+                "exp_fn_limit"
+            ]
+        ]
+    },
+    {
+        "id": "exp_fn_limit",
+        "type": "function",
+        "z": "explore_tab",
+        "name": "Limit + scope",
+        "func": "msg.exploreScope = {\n    everything: false,\n    dbs: [\"DB_TestSignals\"],\n    areas: []\n};\nmsg.maxSymbols = 10;\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 390,
+        "y": 940,
+        "wires": [
+            [
+                "exp_explore_limit"
+            ]
+        ]
+    },
+    {
+        "id": "exp_explore_limit",
+        "type": "s7-plus explore",
+        "z": "explore_tab",
+        "name": "explore (limit demo)",
+        "endpoint": "example_plc_ep",
+        "exploreScope": {
+            "everything": true,
+            "dbs": [],
+            "areas": []
+        },
+        "symbolInfos": "none",
+        "maxSymbols": 100000,
+        "x": 610,
+        "y": 940,
+        "wires": [
+            [
+                "exp_debug_limit_meta",
+                "exp_fn_to_read"
+            ]
+        ]
+    },
+    {
+        "id": "exp_debug_limit_meta",
+        "type": "debug",
+        "z": "explore_tab",
+        "name": "Limit meta",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "meta",
+        "targetType": "msg",
+        "statusVal": "meta.limitExceeded",
+        "statusType": "msg",
+        "x": 830,
+        "y": 920,
+        "wires": []
+    },
+    {
+        "id": "exp_fn_to_read",
+        "type": "function",
+        "z": "explore_tab",
+        "name": "Pick symbols → read",
+        "func": "const pick = [\n    \"DB_TestSignals.Low.Sawtooth_LReal\",\n    \"DB_TestSignals.Mid.Sine_LReal\"\n];\n\nmsg.symbols = msg.payload.filter(s => pick.includes(s));\n\nif (msg.symbols.length === 0) {\n    msg.symbols = pick;\n}\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 840,
+        "y": 980,
+        "wires": [
+            [
+                "exp_read_from_explore"
+            ]
+        ]
+    },
+    {
+        "id": "exp_read_from_explore",
+        "type": "s7-plus read",
+        "z": "explore_tab",
+        "name": "read (msg.symbols)",
+        "endpoint": "example_plc_ep",
+        "symbols": [],
+        "outputFormat": "object",
+        "x": 1060,
+        "y": 980,
+        "wires": [
+            [
+                "exp_debug_read_values"
+            ]
+        ]
+    },
+    {
+        "id": "exp_debug_read_values",
+        "type": "debug",
+        "z": "explore_tab",
+        "name": "Read values",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1270,
+        "y": 980,
+        "wires": []
+    },
+    {
+        "id": "example_plc_ep",
+        "type": "s7-plus endpoint",
+        "name": "PLC",
+        "address": "192.168.0.1",
+        "timeout": 10000
+    },
+    {
+        "id": "a8f3c2e91b047d56",
+        "type": "global-config",
+        "env": [],
+        "modules": {
+            "node-red-contrib-s7-plus": "0.1.1"
+        }
+    }
+]

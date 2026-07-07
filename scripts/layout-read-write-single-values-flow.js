@@ -1,20 +1,20 @@
 'use strict';
 
 /**
- * Re-layout write-single-values-flow.json into three left-aligned columns:
+ * Re-layout read-write-single-values-flow.json into three left-aligned columns:
  *   inject (left) | s7-plus write / s7-plus read (center) | debug (right)
  *
  * Node-RED stores the node center in x, so columns are left-aligned by
  * offsetting each node by half its estimated width.
  *
- * Usage: node scripts/layout-write-flow.js [path-to-flow.json]
+ * Usage: node scripts/layout-read-write-single-values-flow.js [path-to-flow.json]
  */
 
 const fs = require('fs');
 const path = require('path');
 
 const FLOW_PATH = process.argv[2]
-    || path.join(__dirname, '..', 'examples', 'write-single-values-flow.json');
+    || path.join(__dirname, '..', 'examples', 'read-write-single-values-flow.json');
 
 const TAB = 'write_single_tab';
 
@@ -33,7 +33,7 @@ const LEFT_DEBUG = 860;
 
 const ACTION_TYPES = new Set(['s7-plus write', 's7-plus read']);
 
-// Node-RED node-width model (see generate-write-flow.js for details): labels
+// Node-RED node-width model (see generate-read-write-single-values-flow.js for details): labels
 // render in Arial 14px on Windows; node width is
 //   w = max(100, 20 * ceil((labelPx + 50 + (hasInput ? 7 : 0)) / 20)).
 const ARIAL_ADVANCE_1000 = {
@@ -67,6 +67,13 @@ function leftAlignedX(leftEdge, label, hasInput) {
     return leftEdge + nodeWidth(label, hasInput) / 2;
 }
 
+function normalizeReadInjectName(name) {
+    if (typeof name === 'string' && /^Read .+_write$/.test(name)) {
+        return name.replace(/_write$/, '');
+    }
+    return name;
+}
+
 const nodes = JSON.parse(fs.readFileSync(FLOW_PATH, 'utf8'));
 const byId = Object.fromEntries(nodes.map((n) => [n.id, n]));
 
@@ -75,6 +82,13 @@ const actions = tabNodes.filter((n) => ACTION_TYPES.has(n.type));
 const injects = tabNodes.filter((n) => n.type === 'inject');
 const debugs = tabNodes.filter((n) => n.type === 'debug');
 const comments = tabNodes.filter((n) => n.type === 'comment');
+
+for (const inj of injects) {
+    const target = byId[inj.wires?.[0]?.[0]];
+    if (target?.type === 's7-plus read') {
+        inj.name = normalizeReadInjectName(inj.name);
+    }
+}
 
 const injectsByAction = new Map();
 for (const inj of injects) {

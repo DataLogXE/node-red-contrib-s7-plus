@@ -1,0 +1,102 @@
+DATA_BLOCK "DB_TestSignals"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+NON_RETAIN
+   VAR 
+      Enable : Bool;   // Status: signal generation enabled
+      CycleTime_s : LReal;   // Status: last measured cycle time [s]
+      Time_s : LReal;   // Status: accumulated run time [s]
+      Low : Struct   // Low frequency group
+         Frequency_Hz : Real;   // Configured frequency [Hz]
+         Sine_LReal : LReal;   // Sine, normalized -1.0..+1.0
+         Sine_Real : Real;   // Sine, normalized -1.0..+1.0
+         Sine_DInt : DInt;   // Sine, full range
+         Sine_Int : Int;   // Sine, full range
+         Sine_SInt : SInt;   // Sine, full range
+         Cosine_LReal : LReal;   // Cosine, normalized -1.0..+1.0
+         Cosine_Real : Real;   // Cosine, normalized -1.0..+1.0
+         Cosine_DInt : DInt;   // Cosine, full range
+         Cosine_Int : Int;   // Cosine, full range
+         Cosine_SInt : SInt;   // Cosine, full range
+         Triangle_LReal : LReal;   // Triangle, normalized -1.0..+1.0
+         Triangle_Real : Real;   // Triangle, normalized -1.0..+1.0
+         Triangle_DInt : DInt;   // Triangle, full range
+         Triangle_Int : Int;   // Triangle, full range
+         Triangle_SInt : SInt;   // Triangle, full range
+         Sawtooth_LReal : LReal;   // Sawtooth, normalized -1.0..+1.0
+         Sawtooth_Real : Real;   // Sawtooth, normalized -1.0..+1.0
+         Sawtooth_DInt : DInt;   // Sawtooth, full range
+         Sawtooth_Int : Int;   // Sawtooth, full range
+         Sawtooth_SInt : SInt;   // Sawtooth, full range
+         Square_LReal : LReal;   // Square, normalized -1.0..+1.0
+         Square_Real : Real;   // Square, normalized -1.0..+1.0
+         Square_DInt : DInt;   // Square, full range
+         Square_Int : Int;   // Square, full range
+         Square_SInt : SInt;   // Square, full range
+      END_STRUCT;
+      Mid : Struct   // Mid frequency group
+         Frequency_Hz : Real;   // Configured frequency [Hz]
+         Sine_LReal : LReal;   // Sine, normalized -1.0..+1.0
+         Sine_Real : Real;   // Sine, normalized -1.0..+1.0
+         Sine_DInt : DInt;   // Sine, full range
+         Sine_Int : Int;   // Sine, full range
+         Sine_SInt : SInt;   // Sine, full range
+         Cosine_LReal : LReal;   // Cosine, normalized -1.0..+1.0
+         Cosine_Real : Real;   // Cosine, normalized -1.0..+1.0
+         Cosine_DInt : DInt;   // Cosine, full range
+         Cosine_Int : Int;   // Cosine, full range
+         Cosine_SInt : SInt;   // Cosine, full range
+         Triangle_LReal : LReal;   // Triangle, normalized -1.0..+1.0
+         Triangle_Real : Real;   // Triangle, normalized -1.0..+1.0
+         Triangle_DInt : DInt;   // Triangle, full range
+         Triangle_Int : Int;   // Triangle, full range
+         Triangle_SInt : SInt;   // Triangle, full range
+         Sawtooth_LReal : LReal;   // Sawtooth, normalized -1.0..+1.0
+         Sawtooth_Real : Real;   // Sawtooth, normalized -1.0..+1.0
+         Sawtooth_DInt : DInt;   // Sawtooth, full range
+         Sawtooth_Int : Int;   // Sawtooth, full range
+         Sawtooth_SInt : SInt;   // Sawtooth, full range
+         Square_LReal : LReal;   // Square, normalized -1.0..+1.0
+         Square_Real : Real;   // Square, normalized -1.0..+1.0
+         Square_DInt : DInt;   // Square, full range
+         Square_Int : Int;   // Square, full range
+         Square_SInt : SInt;   // Square, full range
+      END_STRUCT;
+      High : Struct   // High frequency group
+         Frequency_Hz : Real;   // Configured frequency [Hz]
+         Sine_LReal : LReal;   // Sine, normalized -1.0..+1.0
+         Sine_Real : Real;   // Sine, normalized -1.0..+1.0
+         Sine_DInt : DInt;   // Sine, full range
+         Sine_Int : Int;   // Sine, full range
+         Sine_SInt : SInt;   // Sine, full range
+         Cosine_LReal : LReal;   // Cosine, normalized -1.0..+1.0
+         Cosine_Real : Real;   // Cosine, normalized -1.0..+1.0
+         Cosine_DInt : DInt;   // Cosine, full range
+         Cosine_Int : Int;   // Cosine, full range
+         Cosine_SInt : SInt;   // Cosine, full range
+         Triangle_LReal : LReal;   // Triangle, normalized -1.0..+1.0
+         Triangle_Real : Real;   // Triangle, normalized -1.0..+1.0
+         Triangle_DInt : DInt;   // Triangle, full range
+         Triangle_Int : Int;   // Triangle, full range
+         Triangle_SInt : SInt;   // Triangle, full range
+         Sawtooth_LReal : LReal;   // Sawtooth, normalized -1.0..+1.0
+         Sawtooth_Real : Real;   // Sawtooth, normalized -1.0..+1.0
+         Sawtooth_DInt : DInt;   // Sawtooth, full range
+         Sawtooth_Int : Int;   // Sawtooth, full range
+         Sawtooth_SInt : SInt;   // Sawtooth, full range
+         Square_LReal : LReal;   // Square, normalized -1.0..+1.0
+         Square_Real : Real;   // Square, normalized -1.0..+1.0
+         Square_DInt : DInt;   // Square, full range
+         Square_Int : Int;   // Square, full range
+         Square_SInt : SInt;   // Square, full range
+      END_STRUCT;
+   END_VAR
+
+
+BEGIN
+   Low.Frequency_Hz := 0.1;
+   Mid.Frequency_Hz := 1.0;
+   High.Frequency_Hz := 10.0;
+
+END_DATA_BLOCK
+

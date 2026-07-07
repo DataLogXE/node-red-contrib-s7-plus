@@ -458,7 +458,7 @@ for (const section of SECTIONS) {
         const readDebugId = `dbr_${slug(section.title)}_${slug(item.var)}`;
         const trigId = `trg_${slug(section.title)}_${slug(item.var)}`;
 
-        nodes.push(injectNode(trigId, `Read ${item.var}`, readTop, readId, '', 'date'));
+        nodes.push(injectNode(trigId, `Read ${item.var.replace(/_write$/, '')}`, readTop, readId, '', 'date'));
         nodes.push(readNode(readId, item.var, readTop, readDebugId, symbol, item.dt));
         nodes.push(debugNode(readDebugId, `${item.dt} read`, readTop, symbol));
 
@@ -471,6 +471,6 @@ for (const section of SECTIONS) {
 nodes.push(endpointNode());
 nodes.push(globalConfigNode('0.0.1'));
 
-const out = path.join(__dirname, '..', 'examples', 'write-single-values-flow.json');
+const out = path.join(__dirname, '..', 'examples', 'read-write-single-values-flow.json');
 fs.writeFileSync(out, JSON.stringify(nodes, null, 4) + '\n');
 console.log(`Wrote ${nodes.length} nodes to ${out}`);

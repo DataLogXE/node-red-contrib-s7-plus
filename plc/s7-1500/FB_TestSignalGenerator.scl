@@ -1,0 +1,191 @@
+FUNCTION_BLOCK "FB_TestSignalGenerator"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+   VAR_INPUT 
+      enable : Bool := TRUE;   // Enable signal generation
+      freqLow : Real := 0.1;   // Frequency of the low group [Hz]
+      freqMid : Real := 1.0;   // Frequency of the mid group [Hz]
+      freqHigh : Real := 10.0;   // Frequency of the high group [Hz]
+      amplitude : Real := 1.0;   // Normalized output amplitude (0.0..1.0)
+   END_VAR
+
+   VAR 
+      runtimeMem : LReal;   // Internal buffer for the RUNTIME instruction
+      t : LReal;   // Accumulated run time [s]
+      firstCall : Bool := TRUE;   // TRUE until the first valid cycle was measured
+   END_VAR
+
+   VAR_TEMP 
+      cycle : LReal;   // Measured cycle time [s]
+      amp : LReal;   // Amplitude as LReal
+      f : LReal;   // Current frequency [Hz]
+      phase : LReal;   // Current phase within one period (0.0..1.0)
+      angle : LReal;   // Current angle [rad]
+      sSine : LReal;   // Sine value, scaled by amplitude
+      sCosine : LReal;   // Cosine value, scaled by amplitude
+      sTriangle : LReal;   // Triangle value, scaled by amplitude
+      sSawtooth : LReal;   // Sawtooth value, scaled by amplitude
+      sSquare : LReal;   // Square value, scaled by amplitude
+   END_VAR
+
+
+BEGIN
+	// --- Time base: measure cycle time and accumulate run time ---
+	#cycle := RUNTIME(#runtimeMem);
+	
+	IF #firstCall THEN
+	    // First call only initializes the RUNTIME buffer, the measured value is invalid
+	    #cycle := 0.0;
+	    #firstCall := FALSE;
+	END_IF;
+	
+	// Reject implausible cycle times (counter overflow / restart)
+	IF (#cycle < 0.0) OR (#cycle > 60.0) THEN
+	    #cycle := 0.0;
+	END_IF;
+	
+	#amp := #amplitude;
+	"DB_TestSignals".Enable := #enable;
+	"DB_TestSignals".CycleTime_s := #cycle;
+	
+	IF NOT #enable THEN
+	    RETURN;
+	END_IF;
+	
+	#t := #t + #cycle;
+	"DB_TestSignals".Time_s := #t;
+	
+	// =====================================================================
+	// Low frequency group
+	// =====================================================================
+	#f := #freqLow;
+	"DB_TestSignals".Low.Frequency_Hz := #freqLow;
+	#phase := FRAC(#t * #f);
+	#angle := 6.283185307179586 * #phase;
+	
+	#sSine := SIN(#angle) * #amp;
+	#sCosine := COS(#angle) * #amp;
+	#sSawtooth := (2.0 * #phase - 1.0) * #amp;
+	#sTriangle := (2.0 * ABS(2.0 * #phase - 1.0) - 1.0) * #amp;
+	IF #phase < 0.5 THEN
+	    #sSquare := 1.0 * #amp;
+	ELSE
+	    #sSquare := -1.0 * #amp;
+	END_IF;
+	
+	"DB_TestSignals".Low.Sine_LReal := #sSine;
+	"DB_TestSignals".Low.Sine_Real := LREAL_TO_REAL(#sSine);
+	"DB_TestSignals".Low.Sine_DInt := LREAL_TO_DINT(#sSine * 2147483647.0);
+	"DB_TestSignals".Low.Sine_Int := LREAL_TO_INT(#sSine * 32767.0);
+	"DB_TestSignals".Low.Sine_SInt := LREAL_TO_SINT(#sSine * 127.0);
+	"DB_TestSignals".Low.Cosine_LReal := #sCosine;
+	"DB_TestSignals".Low.Cosine_Real := LREAL_TO_REAL(#sCosine);
+	"DB_TestSignals".Low.Cosine_DInt := LREAL_TO_DINT(#sCosine * 2147483647.0);
+	"DB_TestSignals".Low.Cosine_Int := LREAL_TO_INT(#sCosine * 32767.0);
+	"DB_TestSignals".Low.Cosine_SInt := LREAL_TO_SINT(#sCosine * 127.0);
+	"DB_TestSignals".Low.Triangle_LReal := #sTriangle;
+	"DB_TestSignals".Low.Triangle_Real := LREAL_TO_REAL(#sTriangle);
+	"DB_TestSignals".Low.Triangle_DInt := LREAL_TO_DINT(#sTriangle * 2147483647.0);
+	"DB_TestSignals".Low.Triangle_Int := LREAL_TO_INT(#sTriangle * 32767.0);
+	"DB_TestSignals".Low.Triangle_SInt := LREAL_TO_SINT(#sTriangle * 127.0);
+	"DB_TestSignals".Low.Sawtooth_LReal := #sSawtooth;
+	"DB_TestSignals".Low.Sawtooth_Real := LREAL_TO_REAL(#sSawtooth);
+	"DB_TestSignals".Low.Sawtooth_DInt := LREAL_TO_DINT(#sSawtooth * 2147483647.0);
+	"DB_TestSignals".Low.Sawtooth_Int := LREAL_TO_INT(#sSawtooth * 32767.0);
+	"DB_TestSignals".Low.Sawtooth_SInt := LREAL_TO_SINT(#sSawtooth * 127.0);
+	"DB_TestSignals".Low.Square_LReal := #sSquare;
+	"DB_TestSignals".Low.Square_Real := LREAL_TO_REAL(#sSquare);
+	"DB_TestSignals".Low.Square_DInt := LREAL_TO_DINT(#sSquare * 2147483647.0);
+	"DB_TestSignals".Low.Square_Int := LREAL_TO_INT(#sSquare * 32767.0);
+	"DB_TestSignals".Low.Square_SInt := LREAL_TO_SINT(#sSquare * 127.0);
+	
+	// =====================================================================
+	// Mid frequency group
+	// =====================================================================
+	#f := #freqMid;
+	"DB_TestSignals".Mid.Frequency_Hz := #freqMid;
+	#phase := FRAC(#t * #f);
+	#angle := 6.283185307179586 * #phase;
+	
+	#sSine := SIN(#angle) * #amp;
+	#sCosine := COS(#angle) * #amp;
+	#sSawtooth := (2.0 * #phase - 1.0) * #amp;
+	#sTriangle := (2.0 * ABS(2.0 * #phase - 1.0) - 1.0) * #amp;
+	IF #phase < 0.5 THEN
+	    #sSquare := 1.0 * #amp;
+	ELSE
+	    #sSquare := -1.0 * #amp;
+	END_IF;
+	
+	"DB_TestSignals".Mid.Sine_LReal := #sSine;
+	"DB_TestSignals".Mid.Sine_Real := LREAL_TO_REAL(#sSine);
+	"DB_TestSignals".Mid.Sine_DInt := LREAL_TO_DINT(#sSine * 2147483647.0);
+	"DB_TestSignals".Mid.Sine_Int := LREAL_TO_INT(#sSine * 32767.0);
+	"DB_TestSignals".Mid.Sine_SInt := LREAL_TO_SINT(#sSine * 127.0);
+	"DB_TestSignals".Mid.Cosine_LReal := #sCosine;
+	"DB_TestSignals".Mid.Cosine_Real := LREAL_TO_REAL(#sCosine);
+	"DB_TestSignals".Mid.Cosine_DInt := LREAL_TO_DINT(#sCosine * 2147483647.0);
+	"DB_TestSignals".Mid.Cosine_Int := LREAL_TO_INT(#sCosine * 32767.0);
+	"DB_TestSignals".Mid.Cosine_SInt := LREAL_TO_SINT(#sCosine * 127.0);
+	"DB_TestSignals".Mid.Triangle_LReal := #sTriangle;
+	"DB_TestSignals".Mid.Triangle_Real := LREAL_TO_REAL(#sTriangle);
+	"DB_TestSignals".Mid.Triangle_DInt := LREAL_TO_DINT(#sTriangle * 2147483647.0);
+	"DB_TestSignals".Mid.Triangle_Int := LREAL_TO_INT(#sTriangle * 32767.0);
+	"DB_TestSignals".Mid.Triangle_SInt := LREAL_TO_SINT(#sTriangle * 127.0);
+	"DB_TestSignals".Mid.Sawtooth_LReal := #sSawtooth;
+	"DB_TestSignals".Mid.Sawtooth_Real := LREAL_TO_REAL(#sSawtooth);
+	"DB_TestSignals".Mid.Sawtooth_DInt := LREAL_TO_DINT(#sSawtooth * 2147483647.0);
+	"DB_TestSignals".Mid.Sawtooth_Int := LREAL_TO_INT(#sSawtooth * 32767.0);
+	"DB_TestSignals".Mid.Sawtooth_SInt := LREAL_TO_SINT(#sSawtooth * 127.0);
+	"DB_TestSignals".Mid.Square_LReal := #sSquare;
+	"DB_TestSignals".Mid.Square_Real := LREAL_TO_REAL(#sSquare);
+	"DB_TestSignals".Mid.Square_DInt := LREAL_TO_DINT(#sSquare * 2147483647.0);
+	"DB_TestSignals".Mid.Square_Int := LREAL_TO_INT(#sSquare * 32767.0);
+	"DB_TestSignals".Mid.Square_SInt := LREAL_TO_SINT(#sSquare * 127.0);
+	
+	// =====================================================================
+	// High frequency group
+	// =====================================================================
+	#f := #freqHigh;
+	"DB_TestSignals".High.Frequency_Hz := #freqHigh;
+	#phase := FRAC(#t * #f);
+	#angle := 6.283185307179586 * #phase;
+	
+	#sSine := SIN(#angle) * #amp;
+	#sCosine := COS(#angle) * #amp;
+	#sSawtooth := (2.0 * #phase - 1.0) * #amp;
+	#sTriangle := (2.0 * ABS(2.0 * #phase - 1.0) - 1.0) * #amp;
+	IF #phase < 0.5 THEN
+	    #sSquare := 1.0 * #amp;
+	ELSE
+	    #sSquare := -1.0 * #amp;
+	END_IF;
+	
+	"DB_TestSignals".High.Sine_LReal := #sSine;
+	"DB_TestSignals".High.Sine_Real := LREAL_TO_REAL(#sSine);
+	"DB_TestSignals".High.Sine_DInt := LREAL_TO_DINT(#sSine * 2147483647.0);
+	"DB_TestSignals".High.Sine_Int := LREAL_TO_INT(#sSine * 32767.0);
+	"DB_TestSignals".High.Sine_SInt := LREAL_TO_SINT(#sSine * 127.0);
+	"DB_TestSignals".High.Cosine_LReal := #sCosine;
+	"DB_TestSignals".High.Cosine_Real := LREAL_TO_REAL(#sCosine);
+	"DB_TestSignals".High.Cosine_DInt := LREAL_TO_DINT(#sCosine * 2147483647.0);
+	"DB_TestSignals".High.Cosine_Int := LREAL_TO_INT(#sCosine * 32767.0);
+	"DB_TestSignals".High.Cosine_SInt := LREAL_TO_SINT(#sCosine * 127.0);
+	"DB_TestSignals".High.Triangle_LReal := #sTriangle;
+	"DB_TestSignals".High.Triangle_Real := LREAL_TO_REAL(#sTriangle);
+	"DB_TestSignals".High.Triangle_DInt := LREAL_TO_DINT(#sTriangle * 2147483647.0);
+	"DB_TestSignals".High.Triangle_Int := LREAL_TO_INT(#sTriangle * 32767.0);
+	"DB_TestSignals".High.Triangle_SInt := LREAL_TO_SINT(#sTriangle * 127.0);
+	"DB_TestSignals".High.Sawtooth_LReal := #sSawtooth;
+	"DB_TestSignals".High.Sawtooth_Real := LREAL_TO_REAL(#sSawtooth);
+	"DB_TestSignals".High.Sawtooth_DInt := LREAL_TO_DINT(#sSawtooth * 2147483647.0);
+	"DB_TestSignals".High.Sawtooth_Int := LREAL_TO_INT(#sSawtooth * 32767.0);
+	"DB_TestSignals".High.Sawtooth_SInt := LREAL_TO_SINT(#sSawtooth * 127.0);
+	"DB_TestSignals".High.Square_LReal := #sSquare;
+	"DB_TestSignals".High.Square_Real := LREAL_TO_REAL(#sSquare);
+	"DB_TestSignals".High.Square_DInt := LREAL_TO_DINT(#sSquare * 2147483647.0);
+	"DB_TestSignals".High.Square_Int := LREAL_TO_INT(#sSquare * 32767.0);
+	"DB_TestSignals".High.Square_SInt := LREAL_TO_SINT(#sSquare * 127.0);
+	
+END_FUNCTION_BLOCK
+

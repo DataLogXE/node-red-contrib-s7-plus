@@ -6,7 +6,11 @@ const ItemAddress = require('../lib/s7plus/item-address');
 const { decodeReadValue, encodeWriteValue } = require('../lib/s7plus/pvalue-codec');
 const { buildReadPayload, buildWritePayload } = require('../lib/s7plus/read-result');
 const { computeCrcFromMeta } = require('../lib/s7plus/crc');
+const { NotificationBuffer } = require('../lib/s7plus/notification-buffer');
+const { SerialQueue } = require('../lib/s7plus/serial-queue');
 const { scoped } = require('../lib/s7plus/debug');
+const { buildConnectionStatePayload } = require('../lib/s7plus/session-info');
+const { pathsEqual } = require('./s7complus-subscribe');
 const log = scoped('endpoint');
 
 const BROWSE_SESSION_TTL_MS = 15 * 60 * 1000;
@@ -21,6 +25,23 @@ const WATCHDOG_MS = 10000;
 // answering big requests (e.g. manual browseFull via Explore node).
 const WATCHDOG_HANG_NO_RESPONSE_MS = 120000;
 const ephemeralBrowseSessions = new Map();
+
+// Safe upper bound for items in a single subscription. The breakpoint test
+// showed a single subscription stays stable up to 100 items across all tested
+// CPUs; wider subscriptions made the PLC reset the TCP connection (ECONNRESET).
+// Wider needs must be split across multiple subscribe nodes.
+const MAX_ITEMS_PER_SUBSCRIPTION = 100;
+
+// Map known subscription-create return-value classes (high bytes) to a
+// human-readable hint. The PLC otherwise only reports an opaque 64-bit code.
+// Takes the hex string as printed in the client error (low bits may be lossy
+// due to Number precision, but the leading class bytes are preserved).
+function describeSubscriptionError(hexStr) {
+    const cls = String(hexStr).replace(/^0x/i, '').padStart(16, '0').slice(0, 6).toLowerCase();
+    if (cls === 'ab3da6') return 'PLC resource/subscription limit reached';
+    if (cls === 'ab3d8d') return 'invalid parameter (e.g. cycle time below PLC minimum of 100 ms)';
+    return null;
+}
 
 // DTL is the only datatype that needs the packed-struct interface
 // timestamp echoed back on write. Accept both the canonical name and the
@@ -50,9 +71,6 @@ function logConnectionEvent(node, RED, config, event, extra = {}) {
     switch (event) {
         case 'connected':
             node.log(`connected to ${address}`);
-            break;
-        case 'disconnected':
-            node.log(`disconnected from ${address} (${extra.reason || 'unknown'})`);
             break;
         case 'connection-lost':
             node.log(`connection lost ${address} (${extra.reason || 'unknown'})`);
@@ -225,17 +243,96 @@ module.exports = function (RED) {
         node._reconnectTimer = null;
         node._reconnectAttempt = 0;
         node._watchdogTimer = null;
+        node._stateListeners = new Map();
+
+        // Subscription registries. _subscriptions is keyed by the owning
+        // subscribe-node id (stable across reconnects); _subsByObjId maps the
+        // PLC's subscription object id (carried in each notification) back to
+        // the same record for routing. Object ids are cleared on disconnect
+        // and re-populated when subscriptions are re-created after reconnect.
+        node._subscriptions = new Map();
+        node._subsByObjId = new Map();
+        // Notifications that arrive before their subscription object id is
+        // registered (the PLC may push the initial full-value snapshot in
+        // the same TCP segment as the CreateObject response). They are
+        // replayed right after registration; see establishSubscription.
+        node._pendingNotifications = new NotificationBuffer();
+        // Serializes all record-mutating subscription operations per owner
+        // node id. Without this, a deploy-initiated subscribe racing an
+        // "inject once after startup" message would run two establishes on
+        // the same record and orphan a PLC subscription whose notifications
+        // get decoded with the wrong reference map.
+        node._subOpQueue = new SerialQueue();
+
+        // Current vs. maximum PLC subscriptions. active = subscriptions really
+        // established on the PLC (object id present); max comes from the system
+        // limits read at connect time (client._limitsCache.subscriptionsMax).
+        node.getSubscriptionStats = () => {
+            const limits = node.client && node.client._limitsCache;
+            const max = limits && limits.subscriptionsMax != null ? limits.subscriptionsMax : null;
+            return { active: node._subsByObjId.size, max };
+        };
 
         node.getStatus = () => node._state;
 
+        node.addStateListener = (ownerId, callback) => {
+            if (!ownerId || typeof callback !== 'function') return;
+            node._stateListeners.set(ownerId, callback);
+        };
+
+        node.removeStateListener = (ownerId) => {
+            node._stateListeners.delete(ownerId);
+        };
+
+        node.getConnectionStatePayload = (event) => {
+            const state = event && event.state != null ? event.state : node._state;
+            return buildConnectionStatePayload(
+                {
+                    address: (config.address || '').trim() || node.client._connectAddress || null,
+                    port: node.client._connectPort || 102,
+                    timeoutMs: parseInt(config.timeout, 10) || null,
+                    connected: node.client.connected,
+                    endpointState: state
+                },
+                {
+                    event: 'stateChange',
+                    previousState: event && event.previousState != null ? event.previousState : null,
+                    changedAt: new Date().toISOString()
+                }
+            );
+        };
+
+        const notifyStateListeners = (event) => {
+            for (const cb of node._stateListeners.values()) {
+                try { cb(event); } catch { /* ignore */ }
+            }
+        };
+
         node._setStatus = (state, text) => {
+            const previousState = node._state;
             node._state = state;
             node.status(statusShape(state, text));
+            if (previousState !== state) {
+                notifyStateListeners({ state, previousState, text: text || null });
+            }
         };
 
         node.client.on('disconnect', (info) => {
             const reason = info && info.reason ? info.reason : 'unknown';
             log('endpoint disconnect', { id: node.id, reason, state: node._state });
+            // PLC-side subscriptions die with the session. Drop the object-id
+            // routing and mark every record as not-established so the connect
+            // handler re-creates them. Owners are notified so they can show
+            // a "connecting" status.
+            node._subsByObjId.clear();
+            node._pendingNotifications.clear();
+            for (const record of node._subscriptions.values()) {
+                record.subscriptionObjectId = 0;
+                record.refToName = null;
+                if (record.callback) {
+                    try { record.callback({ type: 'status', state: 'connecting' }); } catch { /* ignore */ }
+                }
+            }
             if (node._closing) return;
             if (node._state === 'online') {
                 logConnectionEvent(node, RED, config, 'connection-lost', { reason });
@@ -243,6 +340,42 @@ module.exports = function (RED) {
                 node._setStatus('connecting', 'reconnecting\u2026');
                 scheduleReconnect();
             }
+        });
+
+        // Deliver one notification to the owning subscribe-node. Shared by
+        // the live path and the buffered replay in establishSubscription.
+        // Note: seqNum jumps are NOT loss with RouteMode 0x20 — the PLC
+        // advances the sequence number per cycle but skips sending on
+        // cycles without changes (see note in lib/s7plus/subscription.js).
+        function deliverNotification(record, noti) {
+            if (!record.callback) return;
+            try {
+                record.callback({ type: 'data', noti, refToName: record.refToName });
+            } catch (e) {
+                log('notification callback error', { id: node.id, msg: e.message });
+            }
+        }
+
+        // Route each cyclic notification to the owning subscribe-node.
+        node.client.on('notification', (noti) => {
+            const record = node._subsByObjId.get(noti.subscriptionId);
+            if (!record) {
+                // Likely the initial snapshot racing the CreateObject
+                // response: buffer it so establishSubscription can replay
+                // it once the object id is registered.
+                node._pendingNotifications.push(noti.subscriptionId, noti);
+                log('notification with no matching subscription, buffered', { id: node.id, subscriptionId: noti.subscriptionId });
+                return;
+            }
+            deliverNotification(record, noti);
+        });
+
+        // After every successful (re)connect, (re)create all registered
+        // subscriptions. On the initial connect this is a no-op until a
+        // subscribe-node has registered.
+        node.client.on('connect', () => {
+            if (node._subscriptions.size === 0) return;
+            reestablishAllSubscriptions();
         });
 
         const doConnect = async () => {
@@ -344,25 +477,20 @@ module.exports = function (RED) {
             }
         };
 
-        node.browseRoots = () => withReconnect(() => {
-            node.client.clearBrowseState();
-            return node.client.browseRoots();
-        }, 'browseRoots');
-
-        node.browseChildren = (nodeId) => withReconnect(
-            () => node.client.browseChildren(nodeId),
-            `browseChildren:${nodeId}`
-        );
-
-        node.browseResolve = (nodeId) => withReconnect(
-            () => node.client.browseResolve(nodeId),
-            `browseResolve:${nodeId}`
-        );
-
-        node.explorePlcProgram = () => withReconnect(
-            () => node.client.explorePlcProgram(),
-            'explorePlcProgram'
-        );
+        node.getSessionInfo = (opts) => withReconnect(async () => {
+            const t0 = Date.now();
+            const refreshLimits = !opts || opts.refreshLimits !== false;
+            const payload = await node.client.getSessionInfo({ refreshLimits });
+            payload.connection.address = (config.address || '').trim() || payload.connection.address;
+            payload.connection.timeoutMs = parseInt(config.timeout, 10) || payload.connection.timeoutMs;
+            payload.connection.endpointState = node._state;
+            payload.meta = {
+                fetchedAt: new Date().toISOString(),
+                elapsedMs: Date.now() - t0,
+                refreshLimits
+            };
+            return payload;
+        }, 'getSessionInfo');
 
         node.browseFull = (options) => withReconnect(
             () => node.client.browseFull(options),
@@ -423,10 +551,6 @@ module.exports = function (RED) {
 
         function crcCacheSet(symbolPath, address, symbolCrc, datatype) {
             _crcCache.set(symbolPath, { address, symbolCrc, datatype, resolvedAt: Date.now() });
-        }
-
-        function crcCacheInvalidate(symbolPath) {
-            _crcCache.delete(symbolPath);
         }
 
         function crcCacheInvalidateAll() {
@@ -492,6 +616,318 @@ module.exports = function (RED) {
             return entries;
         }
 
+        // ---------- SUBSCRIPTIONS ----------
+
+        /**
+         * Resolve a record's symbols to CRC-secured ItemAddresses and create
+         * the PLC subscription. Populates record.subscriptionObjectId,
+         * record.refToName and record.resolveErrors. Throws on failure.
+         */
+        async function establishSubscription(record) {
+            const entries = await resolveSymbolsBatch(record.symbols);
+            const items = [];
+            const resolveErrors = {};
+            for (let i = 0; i < record.symbols.length; i++) {
+                const e = entries[i];
+                if (!e || e.error) {
+                    resolveErrors[record.symbols[i]] = (e && e.error) || 'resolve failed';
+                    continue;
+                }
+                const addr = new ItemAddress(e.address);
+                if (e.symbolCrc) addr.symbolCrc = e.symbolCrc >>> 0;
+                items.push({ name: record.symbols[i], address: addr, datatype: e.datatype });
+            }
+            record.resolveErrors = resolveErrors;
+            if (items.length === 0) {
+                throw new Error(`No resolvable symbols to subscribe (${Object.keys(resolveErrors).join(', ')})`);
+            }
+
+            // Width guard: a single oversized subscription crashed the PLC
+            // connection in the breakpoint test (> 100 items -> ECONNRESET).
+            if (items.length > MAX_ITEMS_PER_SUBSCRIPTION) {
+                throw new Error(`Subscription has ${items.length} items, exceeds safe maximum (${MAX_ITEMS_PER_SUBSCRIPTION}) - split across multiple subscribe nodes`);
+            }
+
+            // Count guard: refuse before the PLC rejects with an opaque code.
+            const { active, max } = node.getSubscriptionStats();
+            if (max != null && active >= max) {
+                throw new Error(`PLC subscription limit reached (${active}/${max})`);
+            }
+
+            let result;
+            try {
+                result = await node.client.createSubscription({
+                    items,
+                    cycleMs: record.cycleMs,
+                    routeMode: record.routeMode,
+                    creditLimit: record.creditLimit
+                });
+            } catch (e) {
+                const m = /returnValue=0x([0-9a-f]+)/i.exec(e.message || '');
+                const hint = m ? describeSubscriptionError(m[1]) : null;
+                throw hint ? new Error(`${e.message} - ${hint}`) : e;
+            }
+            record.subscriptionObjectId = result.subscriptionObjectId;
+            record.refToName = result.refToName;
+            node._subsByObjId.set(result.subscriptionObjectId, record);
+
+            // Replay notifications that raced the CreateObject response
+            // (e.g. the initial full-value snapshot pushed in the same TCP
+            // segment). Without this, values that never change would be
+            // lost for good (RouteMode 0x20 sends them exactly once).
+            const buffered = node._pendingNotifications.drain(result.subscriptionObjectId);
+            for (const noti of buffered) {
+                deliverNotification(record, noti);
+            }
+            if (buffered.length) {
+                log('replayed buffered notifications', { id: node.id, subscriptionObjectId: result.subscriptionObjectId, count: buffered.length });
+            }
+        }
+
+        // Retry backoff for failed establishments: first retry after 10 s,
+        // doubling up to 5 min. Driven by the watchdog tick.
+        const ESTABLISH_RETRY_BASE_MS = 10000;
+        const ESTABLISH_RETRY_MAX_MS = 5 * 60 * 1000;
+
+        function resetEstablishRetry(record) {
+            record.lastEstablishError = null;
+            record.establishRetryCount = 0;
+            record.nextEstablishRetryAt = 0;
+        }
+
+        // Advance the per-record backoff and arm the next retry slot.
+        function scheduleEstablishRetry(record, errorMsg) {
+            if (errorMsg) record.lastEstablishError = errorMsg;
+            record.establishRetryCount = (record.establishRetryCount || 0) + 1;
+            const delay = Math.min(
+                ESTABLISH_RETRY_BASE_MS * Math.pow(2, record.establishRetryCount - 1),
+                ESTABLISH_RETRY_MAX_MS
+            );
+            record.nextEstablishRetryAt = Date.now() + delay;
+            return delay;
+        }
+
+        // Establish a single subscription and report the outcome to its owner
+        // via the status callback. Never throws (errors surface as status).
+        async function tryEstablish(record) {
+            if (!node.client.connected) {
+                if (record.callback) record.callback({ type: 'status', state: 'connecting' });
+                return;
+            }
+            try {
+                await establishSubscription(record);
+                if (Object.keys(record.resolveErrors || {}).length === 0) {
+                    resetEstablishRetry(record);
+                } else {
+                    // Partially established: some symbols did not resolve
+                    // (e.g. not downloaded to the PLC yet). Keep the healthy
+                    // subscription but arm the heal retry so the missing
+                    // symbols are re-probed by the watchdog.
+                    scheduleEstablishRetry(record);
+                }
+                if (record.callback) {
+                    record.callback({
+                        type: 'status',
+                        state: 'subscribed',
+                        itemCount: record.refToName ? record.refToName.size : 0,
+                        resolveErrors: record.resolveErrors || {}
+                    });
+                }
+            } catch (e) {
+                const delay = scheduleEstablishRetry(record, e.message);
+                log('establish subscription failed', {
+                    id: node.id,
+                    owner: record.ownerNodeId,
+                    msg: e.message,
+                    retryInMs: delay
+                });
+                if (record.callback) record.callback({ type: 'status', state: 'error', text: e.message });
+            }
+        }
+
+        /**
+         * Heal a partially established subscription: re-probe ONLY the
+         * previously unresolvable symbols against a fresh PLC layout. The
+         * healthy subscription is recreated only when at least one of them
+         * became resolvable (e.g. after a TIA download) — otherwise it
+         * stays untouched and the backoff advances (no subscription churn).
+         */
+        async function tryHealPartialResolve(record) {
+            const failedPaths = Object.keys(record.resolveErrors || {});
+            if (failedPaths.length === 0) return;
+            try {
+                // The failed symbols were resolved against the cached browse
+                // tree; only a fresh walk can see a changed PLC program.
+                // Bounded by the backoff (at most every 10 s .. 5 min).
+                node.client.clearBrowseState();
+                const entries = await resolveSymbolsBatch(failedPaths);
+                const improved = entries.some((e) => e && !e.error);
+                if (!improved) {
+                    scheduleEstablishRetry(record);
+                    return;
+                }
+                log('partial resolve heal: recreating subscription', {
+                    id: node.id,
+                    owner: record.ownerNodeId,
+                    healedCandidates: failedPaths.length
+                });
+                node._subsByObjId.delete(record.subscriptionObjectId);
+                try {
+                    await node.client.deleteSubscription(record.subscriptionObjectId);
+                } catch (e) {
+                    log('partial heal delete failed', { id: node.id, msg: e.message });
+                }
+                node._pendingNotifications.discard(record.subscriptionObjectId);
+                record.subscriptionObjectId = 0;
+                record.refToName = null;
+                await tryEstablish(record);
+            } catch (e) {
+                scheduleEstablishRetry(record, e.message);
+                log('partial resolve heal failed', { id: node.id, owner: record.ownerNodeId, msg: e.message });
+            }
+        }
+
+        // Watchdog hook: re-attempt subscriptions that failed to establish
+        // while the connection itself is healthy (resolve error, PLC limit),
+        // and heal partially established ones whose symbols may have
+        // appeared on the PLC in the meantime (TIA download).
+        // Reconnect-triggered re-creation is handled by the 'connect' event.
+        // The eligibility checks run INSIDE the per-owner queue so they see
+        // the consistent end state of any subscribe/unsubscribe in flight.
+        async function retryFailedSubscriptions() {
+            if (!node.client.connected) return;
+            for (const record of [...node._subscriptions.values()]) {
+                await node._subOpQueue.run(record.ownerNodeId, async () => {
+                    if (!node.client.connected) return;
+                    if (!node._subscriptions.has(record.ownerNodeId)) return;
+                    if ((record.nextEstablishRetryAt || 0) > Date.now()) return;
+                    if (!record.subscriptionObjectId) {
+                        await tryEstablish(record);
+                    } else {
+                        await tryHealPartialResolve(record);
+                    }
+                });
+            }
+        }
+        // Exposed for the watchdog tick below and for tests.
+        node._retryFailedSubscriptions = retryFailedSubscriptions;
+
+        async function reestablishAllSubscriptions() {
+            for (const record of [...node._subscriptions.values()]) {
+                await node._subOpQueue.run(record.ownerNodeId, async () => {
+                    if (!node._subscriptions.has(record.ownerNodeId)) return;
+                    // Fresh session, fresh chances: drop any backoff carried
+                    // over from establish failures on the previous connection.
+                    resetEstablishRetry(record);
+                    await tryEstablish(record);
+                });
+            }
+        }
+
+        /**
+         * Register a data-change subscription owned by a subscribe-node.
+         * @param {string} ownerNodeId
+         * @param {string[]} symbols - symbolic paths to subscribe
+         * @param {object} opts - { cycleMs, routeMode, creditLimit }
+         * @param {(event: object) => void} callback - receives status/data events
+         */
+        node.subscribe = (ownerNodeId, symbols, opts, callback) =>
+            node._subOpQueue.run(ownerNodeId, () => subscribeLocked(ownerNodeId, symbols, opts, callback));
+
+        async function subscribeLocked(ownerNodeId, symbols, opts, callback) {
+            const symList = Array.isArray(symbols) ? symbols : [];
+            let record = node._subscriptions.get(ownerNodeId);
+            if (record) {
+                // The fast path must also verify the options: a deploy that
+                // only changes the cycle time keeps the symbol list identical,
+                // but still requires delete + recreate on the PLC.
+                const sameOpts = !opts
+                    || (record.cycleMs === opts.cycleMs
+                        && record.routeMode === opts.routeMode
+                        && record.creditLimit === opts.creditLimit);
+                if (record.subscriptionObjectId && node.client.connected
+                    && pathsEqual(record.symbols, symList) && sameOpts) {
+                    if (callback) record.callback = callback;
+                    if (record.callback) {
+                        record.callback({
+                            type: 'status',
+                            state: 'subscribed',
+                            itemCount: record.refToName ? record.refToName.size : 0,
+                            resolveErrors: record.resolveErrors || {}
+                        });
+                    }
+                    return record;
+                }
+                if (record.subscriptionObjectId) {
+                    node._subsByObjId.delete(record.subscriptionObjectId);
+                    if (node.client.connected) {
+                        try {
+                            await node.client.deleteSubscription(record.subscriptionObjectId);
+                        } catch (e) {
+                            log('resubscribe delete failed', { id: node.id, msg: e.message });
+                        }
+                    }
+                    // Late notifications of the deleted object may have been
+                    // buffered as unmatched while the delete was in flight.
+                    // Drop them so they can never be replayed into a new
+                    // subscription that reuses this object id.
+                    node._pendingNotifications.discard(record.subscriptionObjectId);
+                    record.subscriptionObjectId = 0;
+                    record.refToName = null;
+                }
+                record.symbols = symList;
+                if (opts) {
+                    record.cycleMs = opts.cycleMs;
+                    record.routeMode = opts.routeMode;
+                    record.creditLimit = opts.creditLimit;
+                }
+                if (callback) record.callback = callback;
+                // New symbols/options invalidate any pending retry backoff.
+                resetEstablishRetry(record);
+            } else {
+                record = {
+                    ownerNodeId,
+                    symbols: symList,
+                    cycleMs: opts && opts.cycleMs,
+                    routeMode: opts && opts.routeMode,
+                    creditLimit: opts && opts.creditLimit,
+                    callback,
+                    subscriptionObjectId: 0,
+                    refToName: null,
+                    resolveErrors: {},
+                    lastEstablishError: null,
+                    establishRetryCount: 0,
+                    nextEstablishRetryAt: 0
+                };
+                node._subscriptions.set(ownerNodeId, record);
+            }
+            await tryEstablish(record);
+            return record;
+        }
+
+        node.unsubscribe = (ownerNodeId) =>
+            node._subOpQueue.run(ownerNodeId, () => unsubscribeLocked(ownerNodeId));
+
+        async function unsubscribeLocked(ownerNodeId) {
+            const record = node._subscriptions.get(ownerNodeId);
+            if (!record) return;
+            node._subscriptions.delete(ownerNodeId);
+            if (record.subscriptionObjectId) {
+                node._subsByObjId.delete(record.subscriptionObjectId);
+                if (node.client.connected) {
+                    try {
+                        await node.client.deleteSubscription(record.subscriptionObjectId);
+                    } catch (e) {
+                        log('unsubscribe delete failed', { id: node.id, msg: e.message });
+                    }
+                }
+                // Same reasoning as in the resubscribe path: buffered
+                // notifications of the deleted object are stale.
+                node._pendingNotifications.discard(record.subscriptionObjectId);
+                record.subscriptionObjectId = 0;
+            }
+        }
+
         /**
          * Resolve symbolic paths, compute CRC, perform a CRC-secured read.
          * Uses batch resolution: one browseRootsCached + shared type-info
@@ -503,7 +939,6 @@ module.exports = function (RED) {
         node.resolveAndRead = async (symbols) => {
             const doRead = async (entries) => {
                 const readable = [];
-                const readableSymbols = [];
                 const resolveErrors = {};
 
                 for (let i = 0; i < entries.length; i++) {
@@ -520,7 +955,6 @@ module.exports = function (RED) {
                             symbolCrc: entries[i].symbolCrc,
                             datatype: entries[i].datatype
                         });
-                        readableSymbols.push(symbols[i]);
                     }
                 }
 
@@ -672,6 +1106,7 @@ module.exports = function (RED) {
 
         node.on('close', (_removed, done) => {
             node._closing = true;
+            node._stateListeners.clear();
             if (node._reconnectTimer) {
                 clearTimeout(node._reconnectTimer);
                 node._reconnectTimer = null;
@@ -744,6 +1179,15 @@ module.exports = function (RED) {
                         if (node._closing) return;
                         log('watchdog: ping failed, forcing reconnect', { id: node.id });
                         try { node.client.forceDisconnect('watchdog-ping'); } catch { /* ignore */ }
+                        return;
+                    }
+                    // Connection is healthy: give subscriptions that failed to
+                    // establish (resolve error, PLC limit) another chance,
+                    // honoring their per-record backoff.
+                    try {
+                        await retryFailedSubscriptions();
+                    } catch (e) {
+                        log('watchdog: subscription retry failed', { id: node.id, msg: e.message });
                     }
                 } finally {
                     watchdogBusy = false;

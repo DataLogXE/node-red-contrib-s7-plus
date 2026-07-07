@@ -1,7 +1,7 @@
 'use strict';
 
 // ---------------------------------------------------------------------------
-// Generates examples/read-write-test-flow.json: an automated read/write verification
+// Generates examples/verify-read-write-values-flow.json: an automated read/write verification
 // flow. A single inject starts a sequential test that, for every constant of
 // every scalar datatype defined in plc/s7-1500, writes the value into the
 // matching *_write tag, reads it back and compares write vs. read-back.
@@ -18,7 +18,7 @@ const { EP, DEFAULT_OUTPUT_FORMAT, endpointNode, globalConfigNode } = require('.
 
 const TAB = 'rw_test_tab';
 
-// Scalar datatype sections, mirroring scripts/generate-write-flow.js. One
+// Scalar datatype sections, mirroring scripts/generate-read-write-single-values-flow.js. One
 // *_write tag per datatype; the test values come from every constant of that
 // datatype defined in the matching DB. Hardware/system datatypes are excluded.
 const SECTIONS = [
@@ -110,7 +110,7 @@ function slug(s) {
 }
 
 // ---------------------------------------------------------------------------
-// Literal helpers (shared shape with scripts/generate-write-flow.js)
+// Literal helpers (shared shape with scripts/generate-read-write-single-values-flow.js)
 // ---------------------------------------------------------------------------
 
 function quoted(lit) {
@@ -552,7 +552,7 @@ nodes.push({
         + 'The run never aborts on a failure: it completes fully and emits one '
         + 'result per datatype ("Datatype Result") plus a final "Summary".\n'
         + 'DTL round-trips as Date (ms resolution).\n'
-        + 'Regenerate with: node scripts/generate-rw-test-flow.js'
+        + 'Regenerate with: node scripts/generate-verify-read-write-values-flow.js'
 });
 
 nodes.push({
@@ -683,7 +683,7 @@ nodes.push({
 nodes.push(endpointNode());
 nodes.push(globalConfigNode('0.0.1'));
 
-const out = path.join(__dirname, '..', 'examples', 'read-write-test-flow.json');
+const out = path.join(__dirname, '..', 'examples', 'verify-read-write-values-flow.json');
 fs.writeFileSync(out, JSON.stringify(nodes, null, 4) + '\n');
 
 const totalCases = TESTS.reduce((n, t) => n + t.cases.length, 0);

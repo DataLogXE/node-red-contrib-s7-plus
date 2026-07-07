@@ -1,0 +1,370 @@
+[
+    {
+        "id": "subscribe_tab",
+        "type": "tab",
+        "label": "Subscribe Values",
+        "disabled": false,
+        "info": "Native S7CommPlus subscription: the PLC pushes value changes at the configured cycle (minimum 100 ms), no polling on the Node-RED side.\n\nRequires DB_TestSignals on the PLC with signal generation enabled (FB_TestSignalGenerator).\n\n1) Static config: four DB_TestSignals symbols are listed in the subscribe node (object format). On deploy the subscription starts automatically. msg.payload contains only changed symbols each cycle; function nodes extract individual scalar values.\n\n2) Dynamic: inject nodes send msg.symbols to an empty subscribe node (array format). Use Clear to reset to an empty subscription.\n\nSet the PLC IP on the shared S7+ Endpoint config node (PLC) and deploy."
+    },
+    {
+        "id": "sub_hdr",
+        "type": "comment",
+        "z": "subscribe_tab",
+        "name": "Subscribe — PLC pushes value changes (no polling)",
+        "info": "",
+        "x": 250,
+        "y": 40,
+        "wires": []
+    },
+    {
+        "id": "sub_sec1_comment",
+        "type": "comment",
+        "z": "subscribe_tab",
+        "name": "1) Static config: symbols in subscribe node (object format)",
+        "info": "DB_TestSignals animated values — subscription starts on deploy.",
+        "x": 270,
+        "y": 100,
+        "wires": []
+    },
+    {
+        "id": "sub_node_static",
+        "type": "s7-plus subscribe",
+        "z": "subscribe_tab",
+        "name": "subscribe (object)",
+        "endpoint": "example_plc_ep",
+        "symbols": [
+            {
+                "name": "DB_TestSignals.Low.Sawtooth_LReal",
+                "address": "DB_TestSignals.Low.Sawtooth_LReal",
+                "datatype": "LReal"
+            },
+            {
+                "name": "DB_TestSignals.Mid.Sine_LReal",
+                "address": "DB_TestSignals.Mid.Sine_LReal",
+                "datatype": "LReal"
+            },
+            {
+                "name": "DB_TestSignals.Low.Square_DInt",
+                "address": "DB_TestSignals.Low.Square_DInt",
+                "datatype": "DInt"
+            },
+            {
+                "name": "DB_TestSignals.Low.Sine_Real",
+                "address": "DB_TestSignals.Low.Sine_Real",
+                "datatype": "Real"
+            }
+        ],
+        "cycleMs": 100,
+        "outputFormat": "object",
+        "x": 150,
+        "y": 160,
+        "wires": [
+            [
+                "sub_debug_all",
+                "sub_fn_sawtooth",
+                "sub_fn_sine_mid",
+                "sub_fn_square",
+                "sub_fn_sine_real"
+            ]
+        ]
+    },
+    {
+        "id": "sub_debug_all",
+        "type": "debug",
+        "z": "subscribe_tab",
+        "name": "All changes",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 690,
+        "y": 160,
+        "wires": []
+    },
+    {
+        "id": "sub_fn_sawtooth",
+        "type": "function",
+        "z": "subscribe_tab",
+        "name": "Sawtooth_LReal",
+        "func": "const v = msg.payload[\"DB_TestSignals.Low.Sawtooth_LReal\"];\n\nif (!v) return null;\n\nmsg.payload = v.value;\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 440,
+        "y": 240,
+        "wires": [
+            [
+                "sub_debug_sawtooth"
+            ]
+        ]
+    },
+    {
+        "id": "sub_debug_sawtooth",
+        "type": "debug",
+        "z": "subscribe_tab",
+        "name": "Sawtooth_LReal",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "payload",
+        "statusType": "auto",
+        "x": 700,
+        "y": 240,
+        "wires": []
+    },
+    {
+        "id": "sub_fn_sine_mid",
+        "type": "function",
+        "z": "subscribe_tab",
+        "name": "Mid.Sine_LReal",
+        "func": "const v = msg.payload[\"DB_TestSignals.Mid.Sine_LReal\"];\n\nif (!v) return null;\n\nmsg.payload = v.value;\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 440,
+        "y": 300,
+        "wires": [
+            [
+                "sub_debug_sine_mid"
+            ]
+        ]
+    },
+    {
+        "id": "sub_debug_sine_mid",
+        "type": "debug",
+        "z": "subscribe_tab",
+        "name": "Mid.Sine_LReal",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "payload",
+        "statusType": "auto",
+        "x": 700,
+        "y": 300,
+        "wires": []
+    },
+    {
+        "id": "sub_fn_square",
+        "type": "function",
+        "z": "subscribe_tab",
+        "name": "Square_DInt",
+        "func": "const v = msg.payload[\"DB_TestSignals.Low.Square_DInt\"];\n\nif (!v) return null;\n\nmsg.payload = v.value;\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 430,
+        "y": 360,
+        "wires": [
+            [
+                "sub_debug_square"
+            ]
+        ]
+    },
+    {
+        "id": "sub_debug_square",
+        "type": "debug",
+        "z": "subscribe_tab",
+        "name": "Square_DInt",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "payload",
+        "statusType": "auto",
+        "x": 690,
+        "y": 360,
+        "wires": []
+    },
+    {
+        "id": "sub_fn_sine_real",
+        "type": "function",
+        "z": "subscribe_tab",
+        "name": "Sine_Real",
+        "func": "const v = msg.payload[\"DB_TestSignals.Low.Sine_Real\"];\n\nif (!v) return null;\n\nmsg.payload = v.value;\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 430,
+        "y": 420,
+        "wires": [
+            [
+                "sub_debug_sine_real"
+            ]
+        ]
+    },
+    {
+        "id": "sub_debug_sine_real",
+        "type": "debug",
+        "z": "subscribe_tab",
+        "name": "Sine_Real",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "payload",
+        "statusType": "auto",
+        "x": 690,
+        "y": 420,
+        "wires": []
+    },
+    {
+        "id": "sub_sec2_comment",
+        "type": "comment",
+        "z": "subscribe_tab",
+        "name": "2) Dynamic: msg.symbols via inject (array format)",
+        "info": "Inject nodes add symbols at runtime; Clear resets the subscription.",
+        "x": 240,
+        "y": 500,
+        "wires": []
+    },
+    {
+        "id": "sub_inject_sawtooth_sint",
+        "type": "inject",
+        "z": "subscribe_tab",
+        "name": "Subscribe Sawtooth_SInt",
+        "props": [
+            {
+                "p": "symbols",
+                "v": "[\"DB_TestSignals.Low.Sawtooth_SInt\"]",
+                "vt": "json"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "x": 190,
+        "y": 560,
+        "wires": [
+            [
+                "sub_node_dynamic"
+            ]
+        ]
+    },
+    {
+        "id": "sub_inject_sine_lreal",
+        "type": "inject",
+        "z": "subscribe_tab",
+        "name": "Subscribe Sine_LReal",
+        "props": [
+            {
+                "p": "symbols",
+                "v": "[\"DB_TestSignals.Low.Sine_LReal\"]",
+                "vt": "json"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "x": 180,
+        "y": 600,
+        "wires": [
+            [
+                "sub_node_dynamic"
+            ]
+        ]
+    },
+    {
+        "id": "sub_inject_clear",
+        "type": "inject",
+        "z": "subscribe_tab",
+        "name": "Clear",
+        "props": [
+            {
+                "p": "symbols",
+                "v": "[]",
+                "vt": "json"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "x": 130,
+        "y": 640,
+        "wires": [
+            [
+                "sub_node_dynamic"
+            ]
+        ]
+    },
+    {
+        "id": "sub_node_dynamic",
+        "type": "s7-plus subscribe",
+        "z": "subscribe_tab",
+        "name": "subscribe (array)",
+        "endpoint": "example_plc_ep",
+        "symbols": [],
+        "cycleMs": 100,
+        "outputFormat": "array",
+        "x": 470,
+        "y": 600,
+        "wires": [
+            [
+                "sub_debug_dynamic"
+            ]
+        ]
+    },
+    {
+        "id": "sub_debug_dynamic",
+        "type": "debug",
+        "z": "subscribe_tab",
+        "name": "Dynamic changes",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "payload[0].value",
+        "statusType": "msg",
+        "x": 710,
+        "y": 600,
+        "wires": []
+    },
+    {
+        "id": "example_plc_ep",
+        "type": "s7-plus endpoint",
+        "name": "PLC",
+        "address": "192.168.0.1",
+        "timeout": 10000
+    },
+    {
+        "id": "24c0f4ea7ab334ae",
+        "type": "global-config",
+        "env": [],
+        "modules": {
+            "node-red-contrib-s7-plus": "0.1.1"
+        }
+    }
+]

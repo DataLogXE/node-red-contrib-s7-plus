@@ -107,6 +107,21 @@
     .s7complus-scope-item {
         line-height: 24px;
     }
+    /* Form row whose label may wrap to two lines: center label and input
+       vertically so wrapped labels do not look misaligned. */
+    .s7complus-mid-row {
+        display: flex;
+        align-items: center;
+    }
+    .s7complus-mid-row > label {
+        flex: 0 0 100px;
+        margin: 0;
+    }
+    .s7complus-mid-row > input:not([type="checkbox"]),
+    .s7complus-mid-row > select {
+        flex: 1;
+        width: auto;
+    }
     .s7complus-scope-row {
         display: flex;
         align-items: center;
@@ -813,7 +828,7 @@
     <div class="form-row node-input-symbols-row">
         <ol id="node-input-in-symbols"></ol>
     </div>
-    <div class="form-row">
+    <div class="form-row s7complus-mid-row">
         <label for="node-input-outputFormat"><i class="fa fa-sign-out"></i> Output Format</label>
         <select id="node-input-outputFormat">
             <option value="object">Object</option>
@@ -1085,7 +1100,7 @@ return msg;</pre>
     <div class="form-row node-input-symbols-row">
         <ol id="node-input-out-symbols"></ol>
     </div>
-    <div class="form-row">
+    <div class="form-row s7complus-mid-row">
         <label for="node-input-outputFormat"><i class="fa fa-sign-out"></i> Output Format</label>
         <select id="node-input-outputFormat">
             <option value="object">Object</option>
@@ -1239,6 +1254,250 @@ return msg;</pre>
         oneditsave: function () {
             this.symbols = window.s7complusSymListSerialize($('#node-input-out-symbols'));
             window.s7complusSaveOutputFormat(this);
+        }
+    });
+</script>
+
+<script type="text/html" data-template-name="s7-plus subscribe">
+    <div class="form-row">
+        <label for="node-input-name"><i class="fa fa-tag"></i> Name</label>
+        <input type="text" id="node-input-name" placeholder="Name">
+    </div>
+    <div class="form-row">
+        <label for="node-input-endpoint"><i class="fa fa-server"></i> Endpoint</label>
+        <input type="text" id="node-input-endpoint">
+    </div>
+    <div class="form-row">
+        <label><i class="fa fa-database"></i> Symbols</label>
+        <button type="button" id="s7complus-sub-pick-btn" class="red-ui-button">
+            <i class="fa fa-sitemap"></i> Pick from PLC
+        </button>
+        <span id="s7complus-sub-symbols-count" style="margin-left:8px;color:#888;"></span>
+    </div>
+    <div class="form-row node-input-symbols-row">
+        <ol id="node-input-sub-symbols"></ol>
+    </div>
+    <div class="form-row">
+        <label for="node-input-cycleMs"><i class="fa fa-clock-o"></i> Interval (ms)</label>
+        <input type="number" id="node-input-cycleMs" placeholder="1000" min="100">
+    </div>
+    <div class="form-row s7complus-mid-row">
+        <label for="node-input-outputFormat"><i class="fa fa-sign-out"></i> Output Format</label>
+        <select id="node-input-outputFormat">
+            <option value="object">Object</option>
+            <option value="array">Array</option>
+        </select>
+    </div>
+    <div class="form-row s7complus-mid-row">
+        <label><i class="fa fa-refresh"></i> Resend</label>
+        <input type="checkbox" id="node-input-resendEnabled" style="width:auto; margin:0 4px 0 0;">
+        <label for="node-input-resendEnabled" style="flex:0 1 auto; width:auto; margin:0;">Resend cached values</label>
+    </div>
+    <div class="form-row s7complus-mid-row" id="s7complus-sub-resend-interval-row">
+        <label for="node-input-resendIntervalS"><i class="fa fa-hourglass-half"></i> Resend interval (s)</label>
+        <input type="number" id="node-input-resendIntervalS" placeholder="60" min="1">
+    </div>
+</script>
+
+<script type="text/html" data-help-name="s7-plus subscribe">
+    <p>Native subscription to PLC symbols on a Siemens S7-1200/1500 via an
+    <b>S7+ Endpoint</b>. The PLC <b>pushes</b> value changes (S7CommPlus subscription +
+    notification) — there is no polling. Emits changed symbols in <code>msg.payload</code> per cycle.</p>
+    <p>The node <b>outputs only PLC notifications</b>, not input messages. Configure symbols
+    in the editor or change the active list at runtime with input properties (same rules as
+    <b>S7+ Read</b>).</p>
+
+    <h3>Configuration</h3>
+    <dl class="message-properties">
+        <dt>Endpoint</dt>
+        <dd>Required. Shared connection to the PLC.</dd>
+        <dt>Symbols</dt>
+        <dd>Default symbol list. Use <b>Pick from PLC</b> to select from the live symbol tree.
+        Each row provides the output key (<code>name</code>) and datatype; resolution is
+        symbolic at runtime.</dd>
+        <dt>Interval (ms)</dt>
+        <dd>PLC cycle time for change detection. Minimum <b>100&nbsp;ms</b> (values below are
+        raised automatically). Default: 1000.</dd>
+        <dt>Output Format</dt>
+        <dd><b>Object</b> (default) or <b>Array</b> — see <b>Output properties</b>.</dd>
+        <dt>Resend cached values</dt>
+        <dd>Optional. When enabled, every symbol that has not been sent for the configured
+        <b>Resend interval</b> is re-emitted from the last known value, marked with
+        <code>source: "cache"</code>. Useful when values change rarely and downstream
+        consumers (loggers, dashboards) need periodic samples. Resend is <b>per symbol</b>:
+        a message contains only the symbols whose interval elapsed. Symbols whose last state
+        was an error are resent with that error state. Resend <b>pauses</b> while the
+        connection is offline or no subscription is active; after reconnect the PLC pushes a
+        fresh full snapshot (<code>source: "plc"</code>) which resets the timers.</dd>
+        <dt>Resend interval (s)</dt>
+        <dd>Time in seconds after which an unchanged symbol is resent. Minimum <b>1&nbsp;s</b>.
+        Default: 60.</dd>
+    </dl>
+
+    <h3>Operation</h3>
+    <ol>
+        <li><b>Deploy</b> — If symbols are configured, the node subscribes immediately.
+        With an empty list, status shows <i>waiting for symbols</i> until input provides paths.
+        Symbols added at runtime via <code>msg.addSymbols</code> or a
+        <code>msg.symbols</code> override are stored in the node context and
+        <b>restored after deploy</b> (same Node-RED process; not persisted across a full restart).
+        The subscribe node keeps this list in an in-process registry keyed by node id so deploy
+        restarts do not depend on the context store configuration.</li>
+        <li><b>Input</b> — Each message can update the subscribed list. The node derives paths
+        from editor config + <code>msg.symbols</code> / <code>msg.addSymbols</code>.
+        Re-subscribe runs <b>only when the derived list changes</b> (order ignored).
+        Unchanged lists are ignored. While subscribe/re-subscribe is in progress, further
+        inputs are skipped (<i>skipped (busy)</i>).</li>
+        <li><b>Notifications</b> — After a new subscription (deploy, re-subscribe, or reconnect),
+        the first push sends <b>all</b> subscribed values. Later pushes send <b>only changed</b>
+        symbols; cycles with no change produce no message.</li>
+        <li><b>Reconnect</b> — Subscriptions are session-bound; the endpoint re-creates them
+        after reconnect. Resolved addresses are cached for 5 minutes and refreshed on mismatch.</li>
+    </ol>
+
+    <h3>Input properties</h3>
+    <p><code>msg.payload</code> is not used. An inject with empty payload is valid.</p>
+    <dl class="message-properties">
+        <dt class="optional">symbols <span class="property-type">string[]</span></dt>
+        <dd>For this message only: <b>replaces</b> the editor symbol list (does not merge).
+        Must be an array of symbolic path strings, e.g.
+        <code>["Motor.speed", "Pump.on"]</code>. Other types are rejected.
+        If unset, the editor list is used. An empty array <code>[]</code> falls back to the
+        editor list.</dd>
+        <dt class="optional">addSymbols <span class="property-type">string[]</span></dt>
+        <dd><b>Merges</b> additional symbolic paths with the base list (editor or
+        <code>msg.symbols</code>). Duplicates are removed. Only path strings — same as
+        <b>S7+ Explore</b> / <b>Pick from PLC</b> output.</dd>
+    </dl>
+    <p>Only <b>symbolic</b> paths are supported (CRC-secured). Hex access strings in
+    <code>msg.symbols</code> are ignored. If no paths remain, input fails with
+    <i>No symbols configured</i>.</p>
+
+    <h3>Output properties</h3>
+    <dl class="message-properties">
+        <dt>payload <span class="property-type">object | array</span></dt>
+        <dd>
+            <p><b>Object:</b> one property per <b>changed</b> symbol. Each value:</p>
+            <ul>
+                <li><code>value</code> — decoded value, or <code>null</code> on error</li>
+                <li><code>status</code> — <code>"ok"</code> or <code>"error"</code></li>
+                <li><code>error</code> — empty string on success</li>
+                <li><code>plcTimestamp</code> — PLC timestamp of the last actual change,
+                or <code>null</code>; kept unchanged on resend</li>
+                <li><code>msgTimestamp</code> — <code>Date</code> the message was sent;
+                always present, identical for all symbols of one message</li>
+                <li><code>source</code> — <code>"plc"</code> (live PLC notification) or
+                <code>"cache"</code> (re-emitted last known value)</li>
+            </ul>
+            <p><b>Array:</b> same fields plus <code>symbol</code> on each element.</p>
+        </dd>
+        <dt>timestamp <span class="property-type">Date</span></dt>
+        <dd>Always present: the time the message was sent (same as
+        <code>msgTimestamp</code> in the payload). The PLC change timestamp is available
+        per symbol via <code>plcTimestamp</code>.</dd>
+    </dl>
+
+    <h3>Status and errors</h3>
+    <ul>
+        <li><b>Green</b> — subscribed, update received (check <code>payload[].status</code>
+        for per-symbol errors), or values resent (<i>resent N</i>).</li>
+        <li><b>Yellow</b> — subscribed with unresolved symbols
+        (<i>subscribed N, X unresolved</i>); subscription active for resolved items only.</li>
+        <li><b>Red</b> — subscribe/re-subscribe failed (no resolvable symbols, item limit,
+        PLC limit, etc.). Input errors are passed to the flow via <code>done(err)</code>.</li>
+        <li><b>Grey</b> — waiting for symbols, skipped (busy), or idle.</li>
+    </ul>
+    <p>Per-symbol errors <b>inside a notification</b> do not stop the subscription: the
+    message is still sent; evaluate <code>status</code> in <code>payload</code>.</p>
+
+    <h3>Limits</h3>
+    <ul>
+        <li>Maximum <b>100 symbols</b> per subscribe node.</li>
+        <li>PLC-wide subscription count is limited by the CPU; the endpoint refuses before
+        the PLC rejects opaque errors.</li>
+        <li>No polling fallback if subscription creation fails.</li>
+    </ul>
+
+    <h3>Examples</h3>
+    <p><b>Editor symbols</b> — deploy; first notification (object format):</p>
+    <pre>{
+  "Motor.speed": {
+    "value": 1450, "status": "ok", "error": "",
+    "plcTimestamp": "2026-07-06T20:03:12.480Z",
+    "msgTimestamp": "2026-07-06T20:03:12.501Z",
+    "source": "plc"
+  }
+}</pre>
+    <p><b>Resent value</b> (resend option enabled, no change for the interval):</p>
+    <pre>{
+  "Motor.speed": {
+    "value": 1450, "status": "ok", "error": "",
+    "plcTimestamp": "2026-07-06T20:03:12.480Z",
+    "msgTimestamp": "2026-07-06T20:04:12.501Z",
+    "source": "cache"
+  }
+}</pre>
+    <p><b>Add symbols at runtime</b> (function node before subscribe):</p>
+    <pre>msg.addSymbols = ["DB1.temperature"];
+return msg;</pre>
+    <p><b>Replace list at runtime</b>:</p>
+    <pre>msg.symbols = ["Pump.on", "Pump.speed"];
+return msg;</pre>
+</script>
+
+<script type="text/javascript">
+    RED.nodes.registerType('s7-plus subscribe', {
+        category: 'S7 Plus',
+        color: '#3FADB5',
+        paletteLabel: 'S7+ Subs',
+        defaults: {
+            name: { value: '' },
+            endpoint: { value: '', type: 's7-plus endpoint', required: true },
+            symbols: { value: [] },
+            cycleMs: { value: 1000, validate: RED.validators.number() },
+            outputFormat: { value: 'object' },
+            resendEnabled: { value: false },
+            // blankAllowed: nodes deployed before this option existed have no
+            // resendIntervalS property and must not be flagged as invalid.
+            resendIntervalS: { value: 60, validate: RED.validators.number(true) }
+        },
+        inputs: 1,
+        outputs: 1,
+        icon: 's7complus.svg',
+        label: function () {
+            if (this.name) return this.name;
+            if (Array.isArray(this.symbols) && this.symbols.length) {
+                return this.symbols.length === 1
+                    ? ('S7+ Subs ' + this.symbols[0].name)
+                    : ('S7+ Subs [' + this.symbols.length + ']');
+            }
+            return 'S7+ Subs';
+        },
+        labelStyle: function () {
+            return this.name ? 'node_label_italic' : '';
+        },
+        oneditprepare: function () {
+            const ctrl = window.s7complusSymListBuild('#node-input-sub-symbols', '#s7complus-sub-symbols-count');
+            const table = Array.isArray(this.symbols) ? this.symbols : [];
+            table.forEach(function (row) { ctrl.list.editableList('addItem', row); });
+            ctrl.refreshCount();
+            window.s7complusSymListWirePick('#s7complus-sub-pick-btn', function () { return ctrl.list; }, ctrl.refreshCount);
+            $('#node-input-cycleMs').val(this.cycleMs || 1000);
+            window.s7complusPrepareOutputFormat(this);
+            $('#node-input-resendEnabled').prop('checked', this.resendEnabled === true);
+            $('#node-input-resendIntervalS').val(this.resendIntervalS || 60);
+            function toggleResendRow() {
+                $('#s7complus-sub-resend-interval-row').toggle($('#node-input-resendEnabled').prop('checked'));
+            }
+            $('#node-input-resendEnabled').on('change', toggleResendRow);
+            toggleResendRow();
+        },
+        oneditsave: function () {
+            this.symbols = window.s7complusSymListSerialize($('#node-input-sub-symbols'));
+            this.cycleMs = parseInt($('#node-input-cycleMs').val(), 10) || 1000;
+            window.s7complusSaveOutputFormat(this);
+            this.resendEnabled = $('#node-input-resendEnabled').prop('checked');
+            this.resendIntervalS = parseInt($('#node-input-resendIntervalS').val(), 10) || 60;
         }
     });
 </script>
@@ -1455,6 +1714,84 @@ msg.meta = {
         oneditsave: function () {
             this.symbolInfos = $('#node-input-symbolInfos').val() || 'none';
             this.exploreScope = window.s7complusNormalizeExploreScope(window.s7complusExploreScopeDraft);
+        }
+    });
+</script>
+
+<script type="text/html" data-template-name="s7-plus info">
+    <div class="form-row">
+        <label for="node-input-name"><i class="fa fa-tag"></i> Name</label>
+        <input type="text" id="node-input-name" placeholder="Name">
+    </div>
+    <div class="form-row">
+        <label for="node-input-endpoint"><i class="fa fa-server"></i> Endpoint</label>
+        <input type="text" id="node-input-endpoint">
+    </div>
+    <div class="form-row">
+        <label><i class="fa fa-heartbeat"></i> Monitoring</label>
+        <input type="checkbox" id="node-input-stateChanges" style="display:inline-block; width:auto; margin:0 4px 2px 0; vertical-align:middle;">
+        <label for="node-input-stateChanges" style="width:auto; vertical-align:middle;">Send message on connection state change</label>
+    </div>
+</script>
+
+<script type="text/html" data-help-name="s7-plus info">
+    <p>Reads PLC and session diagnostics from the configured <b>S7+ Endpoint</b> and
+    outputs a structured object in <code>msg.payload</code>. Use it for debugging,
+    monitoring, or documenting the PLC connection without browsing symbols.</p>
+    <p>Any incoming message triggers one info request. Set
+    <code>msg.refreshLimits = false</code> to return cached limits from the last
+    connect without additional PLC reads (PAOM and session IDs remain from connect).</p>
+    <p>Enable <b>Send message on connection state change</b> to emit a message
+    automatically whenever the endpoint connection state changes
+    (<code>offline</code>, <code>connecting</code>, <code>online</code>). These
+    messages include <code>meta.event = "stateChange"</code> and
+    <code>meta.previousState</code> so you can distinguish them from manual
+    info requests. When the endpoint becomes <code>online</code>, the payload is a
+    full session snapshot (cached limits). When the connection is lost
+    (<code>online</code> → <code>connecting</code> or <code>offline</code>), the payload
+    contains only <code>connection</code> (with <code>address</code>, <code>port</code>,
+    <code>timeoutMs</code>, <code>connected</code>, <code>endpointState</code>) and
+    <code>meta</code> — no <code>plc</code>, <code>session</code>, or <code>limits</code>.
+    One initial message is sent on deploy with the current state.</p>
+
+    <h3>Outputs</h3>
+    <dl class="message-properties">
+        <dt>payload <span class="property-type">object</span></dt>
+        <dd>Structured snapshot with <code>plc</code> (PAOM, order number, firmware),
+        <code>session</code> (session IDs), <code>limits</code>
+        (SystemLimits and FreeItems), <code>connection</code> (address, status, liveness),
+        and <code>meta</code> (timing).</dd>
+    </dl>
+
+    <h3>Example</h3>
+    <pre>[inject] → [S7+ Info] → [debug msg.payload]</pre>
+</script>
+
+<script type="text/javascript">
+    RED.nodes.registerType('s7-plus info', {
+        category: 'S7 Plus',
+        color: '#3FADB5',
+        paletteLabel: 'S7+ Info',
+        defaults: {
+            name: { value: '' },
+            endpoint: { value: '', type: 's7-plus endpoint', required: true },
+            stateChanges: { value: false }
+        },
+        inputs: 1,
+        outputs: 1,
+        icon: 's7complus.svg',
+        label: function () {
+            if (this.name) return this.name;
+            return this.stateChanges ? 'S7+ Info [state]' : 'S7+ Info';
+        },
+        labelStyle: function () {
+            return this.name ? 'node_label_italic' : '';
+        },
+        oneditprepare: function () {
+            $('#node-input-stateChanges').prop('checked', !!this.stateChanges);
+        },
+        oneditsave: function () {
+            this.stateChanges = $('#node-input-stateChanges').is(':checked');
         }
     });
 </script>

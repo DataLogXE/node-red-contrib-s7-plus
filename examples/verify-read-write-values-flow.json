@@ -4,7 +4,7 @@
         "type": "tab",
         "label": "R/W Verification Test",
         "disabled": false,
-        "info": "Automated read/write verification for all scalar datatypes in plc/s7-1500.\nPress the \"Run all R/W tests\" inject. The Test Runner writes every constant value of every datatype into the matching *_write tag, reads it back and compares write vs. read-back.\nThe run never aborts on a failure: it completes fully and emits one result per datatype (\"Datatype Result\") plus a final \"Summary\".\nDTL round-trips as Date (ms resolution).\nRegenerate with: node scripts/generate-rw-test-flow.js"
+        "info": "Automated read/write verification for all scalar datatypes in plc/s7-1500.\nPress the \"Run all R/W tests\" inject. The Test Runner writes every constant value of every datatype into the matching *_write tag, reads it back and compares write vs. read-back.\nThe run never aborts on a failure: it completes fully and emits one result per datatype (\"Datatype Result\") plus a final \"Summary\".\nDTL round-trips as Date (ms resolution).\nRegenerate with: node scripts/generate-verify-read-write-values-flow.js"
     },
     {
         "id": "rw_test_hdr",

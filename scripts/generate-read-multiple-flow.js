@@ -5,12 +5,11 @@
 // to read MANY symbols at once with a single s7-plus read node (one request to
 // the PLC), in two ways:
 //
-//   1. Static config read  - the read node lists multiple symbols (one
+//   1. Static config read  - the read node lists multiple values (one
 //      representative constant per scalar datatype from plc/s7-1500 plus a few
-//      sample symbols). One inject triggers a single read of all of them.
+//      sample symbols). One inject triggers a single read of the whole set.
 //   2. Dynamic msg.symbols  - a function node builds msg.symbols (a string[])
-//      at runtime and feeds an unconfigured read node, reading a few selected
-//      real symbols from the sample DBs.
+//      at runtime with the same multiple values and feeds an unconfigured read node.
 //
 // Regenerate with: node scripts/generate-read-multiple-flow.js
 // ---------------------------------------------------------------------------
@@ -34,8 +33,8 @@ const PLC_TO_DT = {
     Time: 'Time', S5Time: 'S5Time', LTime: 'LTime'
 };
 
-// Scalar datatype sections, mirroring scripts/generate-write-flow.js. For the
-// "read all" block we pick ONE representative read symbol per datatype: the
+// Scalar datatype sections, mirroring scripts/generate-read-write-single-values-flow.js. For the
+// static block we pick ONE representative read symbol per datatype: the
 // first non-write constant of that datatype defined in the matching DB.
 const SECTIONS = [
     { db: 'DB_Binary', datatypes: ['Bool'] },
@@ -109,7 +108,7 @@ for (const sig of LIVE_SIGNALS) {
     }
 }
 
-// Build the full multi-symbol list for the "read all" node: every
+// Build the symbol list for both read blocks: every representative scalar plus
 // representative scalar plus the selected sample signals.
 const ALL_SYMBOLS = [];
 for (const signal of LIVE_SIGNALS) {
@@ -121,7 +120,7 @@ for (const section of SECTIONS) {
 
 // ---------------------------------------------------------------------------
 // Dynamic msg.symbols function-node body. Same symbol list as the static
-// "read all symbols" node (ALL_SYMBOLS). msg.symbols must be a string[].
+// read node (ALL_SYMBOLS). msg.symbols must be a string[].
 // (Uses only string concatenation, never template literals.)
 // ---------------------------------------------------------------------------
 
@@ -154,18 +153,19 @@ const nodes = [];
 nodes.push({
     id: TAB,
     type: 'tab',
-    label: 'Read Multiple Values',
+    label: 'Read Multiple Symbols',
     disabled: false,
-    info: 'Reads many symbols at once with a single s7-plus read node.\n'
+    info: 'Reads multiple values with a single s7-plus read node (one PLC request).\n'
         + '\n'
-        + '1) "Read all values" triggers one read of one representative constant '
-        + 'per scalar datatype in plc/s7-1500 plus a few selected sample '
-        + 'symbols. The read node lists all symbols in its config, so a single '
-        + 'request returns the whole payload object (keyed by symbol).\n'
+        + 'The list contains one representative constant per scalar datatype '
+        + 'in plc/s7-1500 plus a few sample symbols.\n'
         + '\n'
-        + '2) "Read selected symbols" shows the dynamic variant: a function node '
-        + 'sets msg.symbols (a string[] with the same symbols as block 1) at '
-        + 'runtime and feeds an unconfigured read node.\n'
+        + '1) "Read multiple values" (static) — symbols listed in the read node config; '
+        + 'one request returns the whole payload object (keyed by symbol).\n'
+        + '\n'
+        + '2) "Read multiple values" (dynamic) — a function node sets msg.symbols '
+        + '(a string[] with the same symbols) at runtime and feeds an '
+        + 'unconfigured read node.\n'
         + '\n'
         + 'Regenerate with: node scripts/generate-read-multiple-flow.js'
 });
@@ -174,7 +174,7 @@ nodes.push({
     id: HDR_ID,
     type: 'comment',
     z: TAB,
-    name: 'Read multiple values — one s7-plus read node, many symbols, one request',
+    name: 'Read multiple symbols — one s7-plus read node, one request',
     info: '',
     x: 360,
     y: 40,
@@ -187,7 +187,7 @@ nodes.push({
     id: ALL_COMMENT_ID,
     type: 'comment',
     z: TAB,
-    name: '1) Static config: all symbols listed in the read node',
+    name: '1) Static — multiple values in node config',
     info: '',
     x: 250,
     y: 100,
@@ -198,7 +198,7 @@ nodes.push({
     id: ALL_INJECT_ID,
     type: 'inject',
     z: TAB,
-    name: 'Read all values',
+    name: 'Read multiple values',
     props: [{ p: 'payload' }],
     repeat: '',
     crontab: '',
@@ -216,7 +216,7 @@ nodes.push({
     id: ALL_READ_ID,
     type: 's7-plus read',
     z: TAB,
-    name: 'read all symbols',
+    name: 'read multiple values (config)',
     endpoint: EP,
     symbols: ALL_SYMBOLS,
     outputFormat: DEFAULT_OUTPUT_FORMAT,
@@ -229,7 +229,7 @@ nodes.push({
     id: ALL_DEBUG_ID,
     type: 'debug',
     z: TAB,
-    name: 'All values',
+    name: 'multiple values',
     active: true,
     tosidebar: true,
     console: false,
@@ -249,7 +249,7 @@ nodes.push({
     id: LIVE_COMMENT_ID,
     type: 'comment',
     z: TAB,
-    name: '2) Dynamic: msg.symbols set at runtime (same list as read all symbols)',
+    name: '2) Dynamic — same multiple values via msg.symbols',
     info: '',
     x: 280,
     y: 260,
@@ -260,7 +260,7 @@ nodes.push({
     id: LIVE_INJECT_ID,
     type: 'inject',
     z: TAB,
-    name: 'Read selected symbols',
+    name: 'Read multiple values',
     props: [{ p: 'payload' }],
     repeat: '',
     crontab: '',
@@ -295,7 +295,7 @@ nodes.push({
     id: LIVE_READ_ID,
     type: 's7-plus read',
     z: TAB,
-    name: 'read (msg.symbols)',
+    name: 'read multiple values (msg.symbols)',
     endpoint: EP,
     symbols: [],
     outputFormat: DEFAULT_OUTPUT_FORMAT,
@@ -308,7 +308,7 @@ nodes.push({
     id: LIVE_DEBUG_ID,
     type: 'debug',
     z: TAB,
-    name: 'Selected symbols',
+    name: 'multiple values',
     active: true,
     tosidebar: true,
     console: false,

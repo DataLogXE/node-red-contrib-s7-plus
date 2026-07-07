@@ -2,15 +2,15 @@
     {
         "id": "read_multi_tab",
         "type": "tab",
-        "label": "Read Multiple Values",
+        "label": "Read Multiple Symbols",
         "disabled": false,
-        "info": "Reads many symbols at once with a single s7-plus read node.\n\n1) \"Read all values\" triggers one read of one representative constant per scalar datatype in plc/s7-1500 plus a few selected sample symbols. The read node lists all symbols in its config, so a single request returns the whole payload object (keyed by symbol).\n\n2) \"Read selected symbols\" shows the dynamic variant: a function node sets msg.symbols (a string[] with the same symbols as block 1) at runtime and feeds an unconfigured read node.\n\nRegenerate with: node scripts/generate-read-multiple-flow.js"
+        "info": "Reads multiple values with a single s7-plus read node (one PLC request).\n\nThe list contains one representative constant per scalar datatype in plc/s7-1500 plus a few sample symbols.\n\n1) \"Read multiple values\" (static) — symbols listed in the read node config; one request returns the whole payload object (keyed by symbol).\n\n2) \"Read multiple values\" (dynamic) — a function node sets msg.symbols (a string[] with the same symbols) at runtime and feeds an unconfigured read node.\n\nRegenerate with: node scripts/generate-read-multiple-flow.js"
     },
     {
         "id": "rm_hdr",
         "type": "comment",
         "z": "read_multi_tab",
-        "name": "Read multiple values — one s7-plus read node, many symbols, one request",
+        "name": "Read multiple symbols — one s7-plus read node, one request",
         "info": "",
         "x": 360,
         "y": 40,
@@ -20,7 +20,7 @@
         "id": "rm_comment_all",
         "type": "comment",
         "z": "read_multi_tab",
-        "name": "1) Static config: all symbols listed in the read node",
+        "name": "1) Static — multiple values in node config",
         "info": "",
         "x": 250,
         "y": 100,
@@ -30,7 +30,7 @@
         "id": "rm_inject_all",
         "type": "inject",
         "z": "read_multi_tab",
-        "name": "Read all values",
+        "name": "Read multiple values",
         "props": [
             {
                 "p": "payload"
@@ -55,7 +55,7 @@
         "id": "rm_read_all",
         "type": "s7-plus read",
         "z": "read_multi_tab",
-        "name": "read all symbols",
+        "name": "read multiple values (config)",
         "endpoint": "example_plc_ep",
         "symbols": [
             {
@@ -227,7 +227,7 @@
         "id": "rm_debug_all",
         "type": "debug",
         "z": "read_multi_tab",
-        "name": "All values",
+        "name": "multiple values",
         "active": true,
         "tosidebar": true,
         "console": false,
@@ -244,7 +244,7 @@
         "id": "rm_comment_live",
         "type": "comment",
         "z": "read_multi_tab",
-        "name": "2) Dynamic: msg.symbols set at runtime (same list as read all symbols)",
+        "name": "2) Dynamic — same multiple values via msg.symbols",
         "info": "",
         "x": 280,
         "y": 260,
@@ -254,7 +254,7 @@
         "id": "rm_inject_live",
         "type": "inject",
         "z": "read_multi_tab",
-        "name": "Read selected symbols",
+        "name": "Read multiple values",
         "props": [
             {
                 "p": "payload"
@@ -299,7 +299,7 @@
         "id": "rm_read_live",
         "type": "s7-plus read",
         "z": "read_multi_tab",
-        "name": "read (msg.symbols)",
+        "name": "read multiple values (msg.symbols)",
         "endpoint": "example_plc_ep",
         "symbols": [],
         "outputFormat": "object",
@@ -315,7 +315,7 @@
         "id": "rm_debug_live",
         "type": "debug",
         "z": "read_multi_tab",
-        "name": "Selected symbols",
+        "name": "multiple values",
         "active": true,
         "tosidebar": true,
         "console": false,
