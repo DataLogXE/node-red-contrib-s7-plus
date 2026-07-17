@@ -184,6 +184,39 @@ describe('s7-plus read input routing', () => {
         assert.deepEqual([...paths].sort(), ['Extra.tag', 'Motor.speed']);
     });
 
+    it('rejects hex-only string in msg.symbols', async () => {
+        const endpoint = makeEndpoint();
+        const Ctor = buildRead(endpoint);
+        const node = new Ctor({ endpoint: 'ep', symbols: editorSymbols });
+        const { err, sent } = await runInput(node, { symbols: ['8A0E0001.A'] });
+        assert.ok(err instanceof Error);
+        assert.match(err.message, /hex access string requires a symbolic name or symbolCrc/);
+        assert.equal(sent, false);
+    });
+
+    it('rejects hex-only configured symbol', async () => {
+        const endpoint = makeEndpoint();
+        const Ctor = buildRead(endpoint);
+        const node = new Ctor({
+            endpoint: 'ep',
+            symbols: [{ name: '8A0E0001.A', address: '8A0E0001.A', datatype: 'Bool' }]
+        });
+        const { err, sent } = await runInput(node, { payload: '' });
+        assert.ok(err instanceof Error);
+        assert.match(err.message, /hex access string requires a symbolic name or symbolCrc/);
+        assert.equal(sent, false);
+    });
+
+    it('rejects hex string in msg.addSymbols', async () => {
+        const endpoint = makeEndpoint();
+        const Ctor = buildRead(endpoint);
+        const node = new Ctor({ endpoint: 'ep', symbols: editorSymbols });
+        const { err, sent } = await runInput(node, { addSymbols: ['8A0E0001.A'] });
+        assert.ok(err instanceof Error);
+        assert.match(err.message, /msg\.addSymbols\[0\]: hex access string requires a symbolic name or symbolCrc/);
+        assert.equal(sent, false);
+    });
+
     it('sets msg.payload to read results and preserves msg.addSymbols', async () => {
         const endpoint = makeEndpoint();
         const Ctor = buildRead(endpoint);

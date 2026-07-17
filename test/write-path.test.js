@@ -76,6 +76,98 @@ describe('client.writeValues error reporting', () => {
     });
 });
 
+// ── client.writeValues: large multi-chunk writes ──────────────────────
+describe('client.writeValues large batch chunking', () => {
+    function makeClient() {
+        const client = new S7CommPlusClient();
+        client._connected = true;
+        client._tagsPerWriteMax = 100;
+        client._requestResponse = async () => ({ errorValues: new Map() });
+        return client;
+    }
+
+    function makeAddrs(n) {
+        return Array.from({ length: n }, () => new ItemAddress('8A0E0001.A'));
+    }
+
+    it('sends 5 PDU chunks for 250 tags when lock batch is capped at 50', async () => {
+        const client = makeClient();
+        let pduCalls = 0;
+        let lockCalls = 0;
+        const origLock = client._withUserLock.bind(client);
+        client._withUserLock = async (label, fn, ...rest) => {
+            if (label === 'writeValues') lockCalls++;
+            return origLock(label, fn, ...rest);
+        };
+        client._requestResponse = async () => {
+            pduCalls++;
+            return { errorValues: new Map() };
+        };
+        const addrs = makeAddrs(250);
+        const { errors } = await client.writeValues(addrs, addrs.map(() => ({})));
+        assert.equal(pduCalls, 5);
+        assert.equal(lockCalls, 5);
+        assert.equal(errors.length, 250);
+        assert.ok(errors.every((e) => e === 0n));
+    });
+
+    it('uses 12 lock batches and 12 PDU chunks for 600 tags', async () => {
+        const client = makeClient();
+        let pduCalls = 0;
+        let lockCalls = 0;
+        const origLock = client._withUserLock.bind(client);
+        client._withUserLock = async (label, fn, ...rest) => {
+            if (label === 'writeValues') lockCalls++;
+            return origLock(label, fn, ...rest);
+        };
+        client._requestResponse = async () => {
+            pduCalls++;
+            return { errorValues: new Map() };
+        };
+        const addrs = makeAddrs(600);
+        const { errors } = await client.writeValues(addrs, addrs.map(() => ({})));
+        assert.equal(lockCalls, 12, '600 tags / lockBatch=50 -> twelve batches');
+        assert.equal(pduCalls, 12);
+        assert.equal(errors.length, 600);
+    });
+
+    it('maps per-item errors across lock-batch boundaries', async () => {
+        const client = makeClient();
+        let pduCalls = 0;
+        client._requestResponse = async () => {
+            pduCalls++;
+            // Fail first item of the batch at global index 500 (PDU 11).
+            if (pduCalls === 11) {
+                return { errorValues: new Map([[1, 0xBEEFn]]) };
+            }
+            return { errorValues: new Map() };
+        };
+        const addrs = makeAddrs(600);
+        const { errors } = await client.writeValues(addrs, addrs.map(() => ({})));
+        assert.equal(errors[499], 0n);
+        assert.equal(errors[500], 0xBEEFn);
+        assert.equal(errors[599], 0n);
+    });
+
+    it('includes chunk context on transport reset during write', async () => {
+        const client = makeClient();
+        client._tagsPerWriteMax = 100;
+        let pduCalls = 0;
+        client._requestResponse = async () => {
+            pduCalls++;
+            if (pduCalls === 2) {
+                throw new Error('CLI: Client not connected (socket-error: read ECONNRESET)');
+            }
+            return { errorValues: new Map() };
+        };
+        const addrs = makeAddrs(150);
+        await assert.rejects(
+            client.writeValues(addrs, addrs.map(() => ({}))),
+            /SetMultiVars chunk failed at offset 50\/150 \(chunkSize=50, tagsPerWriteMax=100\).*ECONNRESET/
+        );
+    });
+});
+
 // ── resolveAndWrite: self-heal on stale/moved address ────────────────
 describe('resolveAndWrite stale-address self-heal', () => {
     function buildEndpoint(config) {
@@ -100,37 +192,67 @@ describe('resolveAndWrite stale-address self-heal', () => {
         return new Ctor(config || {});
     }
 
-    function makeMockClient({ resolveAddresses, writeErrorSequence }) {
+    function flatExploreSymbol(name, accessSequence, computedCrc = 0x1234) {
+        return {
+            name,
+            accessSequence,
+            computedCrc,
+            softdatatypeName: 'Bool'
+        };
+    }
+
+    function makeMockClient({ exploreCatalogs, writeErrorSequence }) {
         const state = {
             clearBrowseStateCalls: 0,
-            resolveCalls: 0,
-            writeAddresses: [],
-            browseFullCalls: 0
+            browseFullCalls: 0,
+            browseFullScopes: [],
+            lazyResolveCalls: 0,
+            writeAddresses: []
         };
+        let exploreIdx = 0;
         const client = {
             connected: true,
             socketAlive: true,
             clearBrowseState() { state.clearBrowseStateCalls++; },
-            async browseResolveSymbolicBatch(paths) {
-                const address = resolveAddresses[Math.min(state.resolveCalls, resolveAddresses.length - 1)];
-                state.resolveCalls++;
-                return paths.map(() => ({ address, crcMeta: null, datatype: 'Bool' }));
+            async browseResolveSymbolicBatch() {
+                state.lazyResolveCalls++;
+                throw new Error('browseResolveSymbolicBatch must not be called');
+            },
+            async browseFull(options) {
+                state.browseFullCalls++;
+                state.browseFullScopes.push(JSON.parse(JSON.stringify(options.scope)));
+                const catalog = exploreCatalogs[
+                    Math.min(exploreIdx++, exploreCatalogs.length - 1)
+                ];
+                const root = options.scope.dbs[0] || options.scope.areas[0];
+                const symbols = catalog[root] || [];
+                return { symbols, meta: {} };
             },
             async writeValues(addresses) {
                 const idx = state.writeAddresses.length;
                 state.writeAddresses.push(addresses.map(a => a.getAccessString()));
                 const code = writeErrorSequence[Math.min(idx, writeErrorSequence.length - 1)];
                 return { errors: [code] };
-            },
-            async browseFull() { state.browseFullCalls++; return { symbols: [] }; }
+            }
         };
         return { client, state };
     }
 
-    it('re-resolves and retries once on a moved-address PLC error (0x...0ebeffef)', async () => {
+    it('re-explores and retries once on a moved-address PLC error (0x...0ebeffef)', async () => {
         const node = buildEndpoint({});
         const { client, state } = makeMockClient({
-            resolveAddresses: ['8A0E0001.A', '8A0E0002.A'],
+            exploreCatalogs: [
+                {
+                    DB_Binary: [
+                        flatExploreSymbol('DB_Binary.Bool_write', '8A0E0001.A', 0x1)
+                    ]
+                },
+                {
+                    DB_Binary: [
+                        flatExploreSymbol('DB_Binary.Bool_write', '8A0E0002.A', 0x2)
+                    ]
+                }
+            ],
             writeErrorSequence: [0x800989000ebeffefn, 0n]
         });
         node.client = client;
@@ -139,82 +261,106 @@ describe('resolveAndWrite stale-address self-heal', () => {
             { name: 'DB_Binary.Bool_write', address: 'DB_Binary.Bool_write', datatype: 'Bool', value: true }
         ]);
 
-        assert.equal(state.clearBrowseStateCalls, 1, 'browse state cleared before re-resolve');
-        assert.equal(state.resolveCalls, 2, 'symbol re-resolved once');
+        assert.equal(state.clearBrowseStateCalls, 1, 'browse state cleared before re-explore');
+        assert.equal(state.browseFullCalls, 2, 'scoped explore runs once per resolve pass');
+        assert.equal(state.lazyResolveCalls, 0);
         assert.equal(state.writeAddresses.length, 2, 'write retried exactly once');
         assert.equal(state.writeAddresses[0][0], '8A0E0001.A', 'first write used the stale address');
-        assert.equal(state.writeAddresses[1][0], '8A0E0002.A', 'retry used the re-resolved new address');
-        assert.equal(state.browseFullCalls, 0, 'self-heal must not trigger browseFull');
+        assert.equal(state.writeAddresses[1][0], '8A0E0002.A', 'retry used the re-explored address');
     });
 
-    it('self-heals on a stale-tree resolution error ("not found in")', async () => {
+    it('self-heals after a failed write by re-exploring the DB', async () => {
         const node = buildEndpoint({});
-        const state = { clearBrowseStateCalls: 0, resolveCalls: 0, writeAddresses: [], browseFullCalls: 0 };
+        const state = { clearBrowseStateCalls: 0, browseFullCalls: 0, writeAddresses: [], lazyResolveCalls: 0 };
+        let exploreIdx = 0;
         node.client = {
             connected: true,
             socketAlive: true,
             clearBrowseState() { state.clearBrowseStateCalls++; },
-            async browseResolveSymbolicBatch(paths) {
-                // First walk hits the stale cached tree -> segment "not
-                // found"; after clearBrowseState the fresh walk resolves.
-                const stale = state.resolveCalls === 0;
-                state.resolveCalls++;
-                return paths.map(() => stale
-                    ? { error: "Symbol segment 'Bool_write' not found in 'DB_Binary'" }
-                    : { address: '8A0E0002.A', crcMeta: null, datatype: 'Bool' });
+            async browseResolveSymbolicBatch() {
+                state.lazyResolveCalls++;
+                throw new Error('browseResolveSymbolicBatch must not be called');
+            },
+            async browseFull(options) {
+                state.browseFullCalls++;
+                const address = exploreIdx === 0 ? '8A0E0001.A' : '8A0E0002.A';
+                exploreIdx++;
+                return {
+                    symbols: [
+                        flatExploreSymbol('DB_Binary.Bool_write', address, exploreIdx)
+                    ]
+                };
             },
             async writeValues(addresses) {
                 state.writeAddresses.push(addresses.map(a => a.getAccessString()));
-                return { errors: [0n] };
-            },
-            async browseFull() { state.browseFullCalls++; return { symbols: [] }; }
+                const stale = state.writeAddresses.length === 1;
+                return { errors: [stale ? 0x800989000ebeffefn : 0n] };
+            }
         };
 
         const result = await node.resolveAndWrite([
             { name: 'DB_Binary.Bool_write', address: 'DB_Binary.Bool_write', datatype: 'Bool', value: true }
         ]);
 
-        assert.equal(state.clearBrowseStateCalls, 1, 'browse state cleared on stale-tree error');
-        assert.equal(state.resolveCalls, 2, 'symbol re-resolved against fresh tree');
-        assert.equal(state.writeAddresses.length, 1, 'write happened only after successful re-resolve');
-        assert.equal(state.writeAddresses[0][0], '8A0E0002.A', 'write used the re-resolved address');
-        assert.equal(result['DB_Binary.Bool_write'].status, 'ok', 'write succeeds after self-heal');
-        assert.equal(state.browseFullCalls, 0, 'self-heal must not trigger browseFull');
+        assert.equal(state.clearBrowseStateCalls, 1, 'browse state cleared on stale write');
+        assert.equal(state.browseFullCalls, 2, 'initial explore plus heal explore');
+        assert.equal(state.writeAddresses.length, 2, 'write retried after re-explore');
+        assert.equal(state.writeAddresses[1][0], '8A0E0002.A');
+        assert.equal(result['DB_Binary.Bool_write'].status, 'ok');
     });
 
-    it('resolveAndRead self-heals on a stale-tree resolution error', async () => {
+    it('resolveAndRead self-heals on a stale read error', async () => {
         const node = buildEndpoint({});
-        const state = { clearBrowseStateCalls: 0, resolveCalls: 0, readCalls: 0 };
+        const state = { clearBrowseStateCalls: 0, browseFullCalls: 0, readCalls: 0, lazyResolveCalls: 0 };
+        let exploreIdx = 0;
         node.client = {
             connected: true,
             socketAlive: true,
             clearBrowseState() { state.clearBrowseStateCalls++; },
-            async browseResolveSymbolicBatch(paths) {
-                const stale = state.resolveCalls === 0;
-                state.resolveCalls++;
-                return paths.map(() => stale
-                    ? { error: "Symbol segment 'Bool_write' not found in 'DB_Binary'" }
-                    : { address: '8A0E0002.A', crcMeta: null, datatype: 'Bool' });
+            async browseResolveSymbolicBatch() {
+                state.lazyResolveCalls++;
+                throw new Error('browseResolveSymbolicBatch must not be called');
+            },
+            async browseFull() {
+                state.browseFullCalls++;
+                const address = exploreIdx === 0 ? '8A0E0001.A' : '8A0E0002.A';
+                exploreIdx++;
+                return {
+                    symbols: [
+                        flatExploreSymbol('DB_Binary.Bool_write', address, exploreIdx)
+                    ]
+                };
             },
             async readValues(addresses) {
                 state.readCalls++;
-                return { values: addresses.map(() => null), errors: addresses.map(() => 0n) };
-            },
-            async browseFull() { return { symbols: [] }; }
+                if (state.readCalls === 1) {
+                    return {
+                        values: addresses.map(() => null),
+                        errors: addresses.map(() => 0x800989000ebeffefn)
+                    };
+                }
+                return {
+                    values: addresses.map(() => true),
+                    errors: addresses.map(() => 0n)
+                };
+            }
         };
 
         const result = await node.resolveAndRead(['DB_Binary.Bool_write']);
 
-        assert.equal(state.clearBrowseStateCalls, 1, 'browse state cleared on stale-tree error');
-        assert.equal(state.resolveCalls, 2, 'symbol re-resolved against fresh tree');
-        assert.equal(state.readCalls, 1, 'read happened only after successful re-resolve');
-        assert.equal(result['DB_Binary.Bool_write'].status, 'ok', 'read succeeds after self-heal');
+        assert.equal(state.clearBrowseStateCalls, 1);
+        assert.equal(state.browseFullCalls, 2);
+        assert.equal(state.readCalls, 2);
+        assert.equal(result['DB_Binary.Bool_write'].status, 'ok');
     });
 
     it('also self-heals on the CRC mismatch code (0x...12cbffef)', async () => {
         const node = buildEndpoint({});
         const { client, state } = makeMockClient({
-            resolveAddresses: ['8A0E0001.A', '8A0E0002.A'],
+            exploreCatalogs: [
+                { DB1: [flatExploreSymbol('DB1.x', '8A0E0001.A', 0x1)] },
+                { DB1: [flatExploreSymbol('DB1.x', '8A0E0002.A', 0x2)] }
+            ],
             writeErrorSequence: [0x8009890012cbffefn, 0n]
         });
         node.client = client;
@@ -225,13 +371,16 @@ describe('resolveAndWrite stale-address self-heal', () => {
 
         assert.equal(state.clearBrowseStateCalls, 1);
         assert.equal(state.writeAddresses.length, 2);
-        assert.equal(state.browseFullCalls, 0, 'self-heal must not trigger browseFull');
+        assert.equal(state.browseFullCalls, 2, 'self-heal must re-explore the DB');
+        assert.equal(state.lazyResolveCalls, 0);
     });
 
     it('does NOT retry or clear browse state on a non-address error', async () => {
         const node = buildEndpoint({});
         const { client, state } = makeMockClient({
-            resolveAddresses: ['8A0E0001.A'],
+            exploreCatalogs: [
+                { DB1: [flatExploreSymbol('DB1.x', '8A0E0001.A')] }
+            ],
             writeErrorSequence: [0x123n]
         });
         node.client = client;
@@ -245,12 +394,15 @@ describe('resolveAndWrite stale-address self-heal', () => {
         assert.ok(result['DB1.x'].error.includes('0x123'));
         assert.equal(state.clearBrowseStateCalls, 0, 'browse state untouched for non-address errors');
         assert.equal(state.writeAddresses.length, 1, 'no retry on non-address errors');
+        assert.equal(state.browseFullCalls, 1, 'only the initial explore');
     });
 
     it('returns an ok per-tag result on a successful write', async () => {
         const node = buildEndpoint({});
         const { client } = makeMockClient({
-            resolveAddresses: ['8A0E0001.A'],
+            exploreCatalogs: [
+                { DB1: [flatExploreSymbol('DB1.x', '8A0E0001.A')] }
+            ],
             writeErrorSequence: [0n]
         });
         node.client = client;
@@ -401,6 +553,29 @@ describe('s7complus-out routing', () => {
         });
     }
 
+    it('shows writing status while the operation is in flight', async () => {
+        const statuses = [];
+        let finishWrite;
+        const endpoint = {
+            resolveAndWrite: () => new Promise((resolve) => { finishWrite = resolve; }),
+            writeTags: async () => ({})
+        };
+        const Ctor = buildOut(endpoint);
+        const node = new Ctor({
+            endpoint: 'ep',
+            symbols: [{ name: 'DB_Binary.Bool_write', address: 'DB_Binary.Bool_write', datatype: 'Bool' }]
+        });
+        const origStatus = node.status.bind(node);
+        node.status = (s) => { statuses.push(s); origStatus(s); };
+
+        const msg = { payload: true };
+        const done = runInput(node, msg);
+        await new Promise((r) => setImmediate(r));
+        assert.deepEqual(statuses[0], { fill: 'blue', shape: 'ring', text: 'writing' });
+        finishWrite({ 'DB_Binary.Bool_write': { value: true, status: 'ok', error: '' } });
+        await done;
+    });
+
     it('routes a symbolic address through resolveAndWrite and sets read-shaped payload', async () => {
         const calls = { resolveAndWrite: [], writeTags: [] };
         const endpoint = {
@@ -430,7 +605,7 @@ describe('s7complus-out routing', () => {
         assert.equal(node._sent, true);
     });
 
-    it('routes a hex address through writeTags', async () => {
+    it('rejects hex-only address', async () => {
         const calls = { resolveAndWrite: [], writeTags: [] };
         const endpoint = {
             resolveAndWrite: async (t) => { calls.resolveAndWrite.push(t); return {}; },
@@ -447,11 +622,10 @@ describe('s7complus-out routing', () => {
 
         const msg = { payload: false };
         const err = await runInput(node, msg);
-        assert.equal(err, undefined);
-        assert.equal(calls.writeTags.length, 1);
+        assert.ok(err instanceof Error);
+        assert.match(err.message, /hex access string requires a symbolic name or symbolCrc/);
+        assert.equal(calls.writeTags.length, 0);
         assert.equal(calls.resolveAndWrite.length, 0);
-        assert.equal(calls.writeTags[0][0].address, '8A0E0001.A');
-        assert.equal(msg.payload['8A0E0001.A'].status, 'ok');
     });
 
     it('surfaces a per-tag write failure in payload, yellow status, message still sent', async () => {

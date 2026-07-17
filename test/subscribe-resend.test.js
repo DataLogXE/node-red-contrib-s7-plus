@@ -24,7 +24,13 @@ function buildSubscribe(endpointMock) {
                 node.error = (e) => { node._error = e; };
                 node.warn = () => {};
                 node._sent = [];
-                node.send = (msg) => { node._sent.push(msg); };
+                node.send = (arg) => {
+                    if (Array.isArray(arg)) {
+                        for (const m of arg) node._sent.push(m);
+                    } else {
+                        node._sent.push(arg);
+                    }
+                };
             },
             getNode() { return endpointMock; },
             registerType(_name, ctor) { Ctor = ctor; }
@@ -86,8 +92,14 @@ function pval(v) {
     return { toJs: () => v };
 }
 
+async function flushOutput() {
+    for (let i = 0; i < 8; i++) {
+        await new Promise((r) => setImmediate(r));
+    }
+}
+
 /** Push a fake PLC notification through the endpoint data callback. */
-function emitData(endpoint, { seqNum = 1, values = {}, errors = {}, plcTimestamp = null } = {}) {
+async function emitData(endpoint, { seqNum = 1, values = {}, errors = {}, plcTimestamp = null } = {}) {
     const valueMap = new Map();
     for (const [ref, v] of Object.entries(values)) valueMap.set(Number(ref), pval(v));
     const errorMap = new Map();
@@ -97,6 +109,7 @@ function emitData(endpoint, { seqNum = 1, values = {}, errors = {}, plcTimestamp
         noti: { seqNum, values: valueMap, errors: errorMap, plcTimestamp },
         refToName: REF_TO_NAME
     });
+    await flushOutput();
 }
 
 async function makeNode(t, endpoint, config) {
@@ -116,7 +129,7 @@ describe('subscribe resend option', () => {
         const endpoint = makeEndpoint();
         const node = await makeNode(t, endpoint, {});
         const plcTs = new Date(999_000);
-        emitData(endpoint, { values: { 1: 10 }, plcTimestamp: plcTs });
+        await emitData(endpoint, { values: { 1: 10 }, plcTimestamp: plcTs });
 
         assert.equal(node._sent.length, 1);
         const entry = node._sent[0].payload['Motor.speed'];
@@ -133,16 +146,17 @@ describe('subscribe resend option', () => {
         const endpoint = makeEndpoint();
         const node = await makeNode(t, endpoint, { resendEnabled: true, resendIntervalS: 60 });
         const plcTs = new Date(999_000);
-        emitData(endpoint, { values: { 1: 10, 2: 20 }, plcTimestamp: plcTs });
+        await emitData(endpoint, { values: { 1: 10, 2: 20 }, plcTimestamp: plcTs });
         assert.equal(node._sent.length, 1);
 
         // 30 s later only Motor.speed changes -> its resend clock restarts.
         t.mock.timers.tick(30_000);
-        emitData(endpoint, { seqNum: 2, values: { 1: 11 }, plcTimestamp: new Date(1_029_000) });
+        await emitData(endpoint, { seqNum: 2, values: { 1: 11 }, plcTimestamp: new Date(1_029_000) });
         assert.equal(node._sent.length, 2);
 
         // At t=+61 s only Tank.level (unchanged since t=0) is stale.
         t.mock.timers.tick(31_000);
+        await flushOutput();
         assert.equal(node._sent.length, 3);
         const msg = node._sent[2];
         assert.deepEqual(Object.keys(msg.payload), ['Tank.level']);
@@ -158,6 +172,7 @@ describe('subscribe resend option', () => {
 
         // 30 s later Motor.speed (last live at t=+30 s) becomes stale too.
         t.mock.timers.tick(30_000);
+        await flushOutput();
         assert.equal(node._sent.length, 4);
         assert.deepEqual(Object.keys(node._sent[3].payload), ['Motor.speed']);
         assert.equal(node._sent[3].payload['Motor.speed'].source, 'cache');
@@ -166,23 +181,26 @@ describe('subscribe resend option', () => {
     it('resend clock restarts after a resend', async (t) => {
         const endpoint = makeEndpoint();
         const node = await makeNode(t, endpoint, { resendEnabled: true, resendIntervalS: 60 });
-        emitData(endpoint, { values: { 1: 10 } });
+        await emitData(endpoint, { values: { 1: 10 } });
 
         t.mock.timers.tick(60_000);
+        await flushOutput();
         assert.equal(node._sent.length, 2);
         // Not stale again until another full interval elapsed.
         t.mock.timers.tick(30_000);
         assert.equal(node._sent.length, 2);
         t.mock.timers.tick(30_000);
+        await flushOutput();
         assert.equal(node._sent.length, 3);
     });
 
     it('resends error states with the stored error', async (t) => {
         const endpoint = makeEndpoint();
         const node = await makeNode(t, endpoint, { resendEnabled: true, resendIntervalS: 60 });
-        emitData(endpoint, { values: { 1: 10 }, errors: { 2: 0xdead } });
+        await emitData(endpoint, { values: { 1: 10 }, errors: { 2: 0xdead } });
 
         t.mock.timers.tick(60_000);
+        await flushOutput();
         assert.equal(node._sent.length, 2);
         const entry = node._sent[1].payload['Tank.level'];
         assert.equal(entry.status, 'error');
@@ -196,9 +214,10 @@ describe('subscribe resend option', () => {
         const node = await makeNode(t, endpoint, {
             resendEnabled: true, resendIntervalS: 60, outputFormat: 'array'
         });
-        emitData(endpoint, { values: { 1: 10, 2: 20 } });
+        await emitData(endpoint, { values: { 1: 10, 2: 20 } });
 
         t.mock.timers.tick(60_000);
+        await flushOutput();
         assert.equal(node._sent.length, 2);
         const payload = node._sent[1].payload;
         assert.ok(Array.isArray(payload));
@@ -209,7 +228,7 @@ describe('subscribe resend option', () => {
     it('pauses resend while the endpoint is offline', async (t) => {
         const endpoint = makeEndpoint();
         const node = await makeNode(t, endpoint, { resendEnabled: true, resendIntervalS: 60 });
-        emitData(endpoint, { values: { 1: 10 } });
+        await emitData(endpoint, { values: { 1: 10 } });
 
         endpoint.setStatus('connecting');
         t.mock.timers.tick(120_000);
@@ -218,6 +237,7 @@ describe('subscribe resend option', () => {
         // Back online: the stale value goes out on the next scan.
         endpoint.setStatus('online');
         t.mock.timers.tick(1_000);
+        await flushOutput();
         assert.equal(node._sent.length, 2);
         assert.equal(node._sent[1].payload['Motor.speed'].source, 'cache');
     });
@@ -225,7 +245,7 @@ describe('subscribe resend option', () => {
     it('does not resend when the option is disabled', async (t) => {
         const endpoint = makeEndpoint();
         const node = await makeNode(t, endpoint, {});
-        emitData(endpoint, { values: { 1: 10 } });
+        await emitData(endpoint, { values: { 1: 10 } });
 
         t.mock.timers.tick(600_000);
         assert.equal(node._sent.length, 1);
@@ -234,7 +254,7 @@ describe('subscribe resend option', () => {
     it('close stops the resend timer', async (t) => {
         const endpoint = makeEndpoint();
         const node = await makeNode(t, endpoint, { resendEnabled: true, resendIntervalS: 60 });
-        emitData(endpoint, { values: { 1: 10 } });
+        await emitData(endpoint, { values: { 1: 10 } });
 
         await runClose(node, false);
         t.mock.timers.tick(120_000);
@@ -244,7 +264,7 @@ describe('subscribe resend option', () => {
     it('unsubscribe via empty msg.symbols clears the cache', async (t) => {
         const endpoint = makeEndpoint();
         const node = await makeNode(t, endpoint, { resendEnabled: true, resendIntervalS: 60 });
-        emitData(endpoint, { values: { 1: 10 } });
+        await emitData(endpoint, { values: { 1: 10 } });
 
         await runInput(node, { symbols: [] });
         t.mock.timers.tick(120_000);
@@ -254,13 +274,14 @@ describe('subscribe resend option', () => {
     it('re-subscribe purges cached values of removed symbols', async (t) => {
         const endpoint = makeEndpoint();
         const node = await makeNode(t, endpoint, { resendEnabled: true, resendIntervalS: 60 });
-        emitData(endpoint, { values: { 1: 10, 2: 20 } });
+        await emitData(endpoint, { values: { 1: 10, 2: 20 } });
 
         // Override drops Tank.level from the subscription.
         await runInput(node, { symbols: ['Motor.speed'] });
         assert.equal(endpoint.callCount(), 2);
 
         t.mock.timers.tick(60_000);
+        await flushOutput();
         assert.equal(node._sent.length, 2);
         assert.deepEqual(Object.keys(node._sent[1].payload), ['Motor.speed']);
     });

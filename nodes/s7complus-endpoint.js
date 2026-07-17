@@ -5,7 +5,12 @@ const { S7CommPlusClient } = require('../lib/s7plus/client');
 const ItemAddress = require('../lib/s7plus/item-address');
 const { decodeReadValue, encodeWriteValue } = require('../lib/s7plus/pvalue-codec');
 const { buildReadPayload, buildWritePayload } = require('../lib/s7plus/read-result');
-const { computeCrcFromMeta } = require('../lib/s7plus/crc');
+const {
+    symbolRoot,
+    exploreScopeForRoot,
+    uniqueSymbolRoots,
+    seedCrcCacheFromFlatSymbols
+} = require('../lib/s7plus/explore-resolve');
 const { NotificationBuffer } = require('../lib/s7plus/notification-buffer');
 const { SerialQueue } = require('../lib/s7plus/serial-queue');
 const { scoped } = require('../lib/s7plus/debug');
@@ -163,29 +168,6 @@ function isStaleConnectionError(err) {
         || m.includes('socket-close')
         || m.includes('socket-end')
         || m.includes('socket-error');
-}
-
-/**
- * True when a symbol-resolution error signals a STALE BROWSE TREE rather
- * than a genuinely bad input. These messages are thrown by
- * lib/s7plus/browse/resolve-symbolic.js while walking the cached tree:
- * after a PLC program change (rename/delete/move of a DB member) the
- * cached structure no longer matches the PLC, so a segment/root that
- * used to exist is reported as missing. Treating these like the
- * address-stale PLC codes lets the endpoint self-heal: clear the browse
- * cache, re-resolve against the fresh PLC layout, and retry once.
- *
- * 'Invalid symbolic path:' is intentionally excluded — that is a real
- * user input error (e.g. "DB1" without a member) and must not trigger
- * a cache flush + lazy re-resolve retry.
- */
-function isStaleTreeError(err) {
-    if (!err || !err.message) return false;
-    const m = err.message;
-    return m.includes('not found in')                 // segment missing (renamed/deleted)
-        || m.includes('not found among PLC roots')     // DB root renamed/removed
-        || m.includes('not reachable')                 // structure changed
-        || m.includes('does not resolve to a readable leaf'); // member type changed
 }
 
 async function withBrowseClient(RED, body, fn) {
@@ -492,11 +474,6 @@ module.exports = function (RED) {
             return payload;
         }, 'getSessionInfo');
 
-        node.browseFull = (options) => withReconnect(
-            () => node.client.browseFull(options),
-            'browseFull'
-        );
-
         /**
          * Read one or more tags. Each tag is `{ name?, address, datatype? }`.
          * `address` must be a resolved hex access string (e.g. "8A0E0001.A").
@@ -533,8 +510,8 @@ module.exports = function (RED) {
         // Address/symbol-related PLC errors that mean the cached address is
         // stale: the symbol was deleted or moved to a new address (PLC
         // program changed). Both warrant the same self-heal: clear the
-        // browse-state + CRC cache, re-resolve against the fresh PLC tree,
-        // and retry once. 0x...12cbffef = CRC mismatch, 0x...0ebeffef =
+        // browse-state + CRC cache, re-explore affected DB/area, and retry
+        // once. 0x...12cbffef = CRC mismatch, 0x...0ebeffef =
         // address/object no longer valid.
         const ADDR_STALE_HEX = ['8009890012cbffef', '800989000ebeffef'];
         const _crcCache = new Map();
@@ -557,6 +534,12 @@ module.exports = function (RED) {
             _crcCache.clear();
         }
 
+        node.browseFull = (options) => withReconnect(async () => {
+            const result = await node.client.browseFull(options);
+            seedCrcCacheFromFlatSymbols(result.symbols, crcCacheSet);
+            return result;
+        }, 'browseFull');
+
         /**
          * True when an error signals that a cached address is stale (symbol
          * deleted or moved to a new address). Checks both the raw per-item
@@ -578,8 +561,9 @@ module.exports = function (RED) {
         }
 
         /**
-         * Resolve a batch of symbols, using the CRC cache for hits and
-         * browseResolveSymbolicBatch for all misses in a single pass.
+         * Resolve a batch of symbols via the CRC cache. Cache misses trigger
+         * one scoped browseFull per affected DB or memory area; the entire
+         * explore result is seeded into _crcCache before re-lookup.
          * Returns one entry per symbol (same order as input).
          */
         async function resolveSymbolsBatch(symbols) {
@@ -597,18 +581,23 @@ module.exports = function (RED) {
 
             if (uncachedIndices.length > 0) {
                 const uncachedPaths = uncachedIndices.map(i => symbols[i]);
-                const resolved = await node.client.browseResolveSymbolicBatch(uncachedPaths);
 
-                for (let j = 0; j < uncachedIndices.length; j++) {
-                    const idx = uncachedIndices[j];
-                    const r = resolved[j];
-                    if (r.error) {
-                        entries[idx] = { address: null, symbolCrc: 0, error: r.error };
+                for (const root of uniqueSymbolRoots(uncachedPaths)) {
+                    await node.browseFull({ scope: exploreScopeForRoot(root) });
+                }
+
+                for (const idx of uncachedIndices) {
+                    const symbol = symbols[idx];
+                    const root = symbolRoot(symbol);
+                    const cached = crcCacheGet(symbol);
+                    if (cached) {
+                        entries[idx] = cached;
                     } else {
-                        const symbolCrc = r.crcMeta ? computeCrcFromMeta(r.crcMeta) : 0;
-                        const entry = { address: r.address, symbolCrc, datatype: r.datatype, resolvedAt: Date.now() };
-                        crcCacheSet(symbols[idx], r.address, symbolCrc, r.datatype);
-                        entries[idx] = entry;
+                        entries[idx] = {
+                            address: null,
+                            symbolCrc: 0,
+                            error: `Symbol '${symbol}' was not exported by explore of ${root}`
+                        };
                     }
                 }
             }
@@ -930,9 +919,8 @@ module.exports = function (RED) {
 
         /**
          * Resolve symbolic paths, compute CRC, perform a CRC-secured read.
-         * Uses batch resolution: one browseRootsCached + shared type-info
-         * cache for all uncached symbols.
-         * On CRC-Mismatch error: invalidate cache, re-resolve, retry once.
+         * Uses the CRC cache; misses trigger scoped explore per DB/area.
+         * On CRC-Mismatch error: invalidate cache, re-explore, retry once.
          * @param {string[]} symbols - symbolic paths like "DB1.readings[0]"
          * @returns {object} keyed by symbol path
          */
@@ -971,7 +959,7 @@ module.exports = function (RED) {
             for (let i = 0; i < symbols.length; i++) {
                 const r = result[symbols[i]];
                 if (r && r.status === 'error' && r.error
-                    && (isAddressStaleError({ message: r.error }) || isStaleTreeError({ message: r.error }))) {
+                    && isAddressStaleError({ message: r.error })) {
                     mismatchIndices.push(i);
                 }
             }
@@ -979,11 +967,11 @@ module.exports = function (RED) {
             if (mismatchIndices.length === 0) return result;
 
             const mismatchSymbols = mismatchIndices.map(i => symbols[i]);
-            node.warn(`Stale address on ${mismatchSymbols.length} symbol(s) — symbol may have moved or PLC program changed. Clearing cache and re-resolving. Affected: ${mismatchSymbols.slice(0, 5).join(', ')}${mismatchSymbols.length > 5 ? ' ...' : ''}`);
+            node.warn(`Stale address on ${mismatchSymbols.length} symbol(s) — symbol may have moved or PLC program changed. Clearing cache and re-exploring affected DB/area. Affected: ${mismatchSymbols.slice(0, 5).join(', ')}${mismatchSymbols.length > 5 ? ' ...' : ''}`);
             log('resolveAndRead stale address, retrying', { symbols: mismatchSymbols });
 
-            // Clear the cached browse tree so re-resolution walks the
-            // fresh PLC layout and picks up any moved symbol addresses.
+            // Clear browse state and CRC cache so re-explore picks up the
+            // fresh PLC layout and moved symbol addresses.
             node.client.clearBrowseState();
             crcCacheInvalidateAll();
 
@@ -1041,7 +1029,7 @@ module.exports = function (RED) {
          * Resolve symbolic tags to hex address + CRC, then perform a
          * CRC-secured write. Mirror of resolveAndRead so the write path
          * gets the same symbol resolution and self-healing behaviour.
-         * On CRC mismatch: invalidate the cache, re-resolve, retry once.
+         * On CRC mismatch: invalidate the cache, re-explore, retry once.
          * @param {Array} tags - `{ name?, address (symbolic), value, datatype? }`
          */
         node.resolveAndWrite = async (tags) => {
@@ -1083,7 +1071,7 @@ module.exports = function (RED) {
             for (let i = 0; i < tags.length; i++) {
                 const r = result[keyOf(tags[i])];
                 if (r && r.status === 'error' && r.error
-                    && (isAddressStaleError({ message: r.error }) || isStaleTreeError({ message: r.error }))) {
+                    && isAddressStaleError({ message: r.error })) {
                     mismatchIndices.push(i);
                 }
             }
@@ -1091,12 +1079,11 @@ module.exports = function (RED) {
             if (mismatchIndices.length === 0) return result;
 
             const mismatchSymbols = mismatchIndices.map(i => symbols[i]);
-            node.warn(`Stale address on ${mismatchSymbols.length} write symbol(s) — symbol may have moved or PLC program changed. Clearing cache and re-resolving. Affected: ${mismatchSymbols.slice(0, 5).join(', ')}${mismatchSymbols.length > 5 ? ' ...' : ''}`);
+            node.warn(`Stale address on ${mismatchSymbols.length} write symbol(s) — symbol may have moved or PLC program changed. Clearing cache and re-exploring affected DB/area. Affected: ${mismatchSymbols.slice(0, 5).join(', ')}${mismatchSymbols.length > 5 ? ' ...' : ''}`);
             log('resolveAndWrite stale address, retrying', { symbols: mismatchSymbols });
 
-            // A stale cached address may have been resolved through the
-            // cached browse tree; clear it so re-resolution walks the
-            // fresh PLC layout and picks up the symbol's new address.
+            // Clear browse state and CRC cache so re-explore picks up the
+            // fresh PLC layout and the symbol's new address.
             node.client.clearBrowseState();
             crcCacheInvalidateAll();
 

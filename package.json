@@ -1,7 +1,7 @@
 {
   "name": "node-red-contrib-s7-plus",
-  "version": "0.2.0",
-  "description": "Node-RED nodes for Siemens S7-1200/1500 via S7CommPlus (symbolic access)",
+  "version": "0.3.0",
+  "description": "Node-RED nodes for symbolic read/write/subscribe to Siemens S7-1200/1500 over native S7CommPlus (Optimized DBs, no PUT/GET).",
   "main": "nodes/s7complus.js",
   "files": [
     "nodes/",
@@ -16,16 +16,20 @@
   "keywords": [
     "node-red",
     "siemens",
+    "simatic",
     "s7",
-    "s7commplus",
     "s7-1200",
     "s7-1500",
+    "s7commplus",
+    "s7comm-plus",
     "plc",
-    "profinet",
+    "iso-on-tcp",
     "symbolic-access",
     "optimized-blocks",
     "tia-portal",
-    "iiot"
+    "tls",
+    "subscription",
+    "industrial-automation"
   ],
   "author": {
     "name": "DataLogXE",

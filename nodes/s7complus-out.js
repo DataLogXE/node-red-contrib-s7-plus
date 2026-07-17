@@ -1,6 +1,6 @@
 'use strict';
 
-const { isHexAddress, isSymbolicName } = require('../lib/s7plus/tag-routing');
+const { isHexAddress, isRawHexAccessString, isSymbolicName, assertCrcSecuredTag } = require('../lib/s7plus/tag-routing');
 const { formatOutputPayload } = require('../lib/s7plus/read-result');
 
 /**
@@ -9,12 +9,14 @@ const { formatOutputPayload } = require('../lib/s7plus/read-result');
  *   1. hex address + symbolCrc        -> CRC-secured writeTags
  *   2. symbolic address (no hex)      -> resolveAndWrite
  *   3. hex address + symbolic name    -> resolveAndWrite (CRC protection)
- *   4. hex address only               -> writeTags (legacy, no CRC)
  */
 function normalizeSymbol(v, i) {
     if (!v) throw new Error(`Symbol #${i} is empty`);
     if (typeof v === 'string') {
-        return { name: v, address: v, datatype: undefined, symbolic: !isHexAddress(v) };
+        if (isRawHexAccessString(v)) {
+            assertCrcSecuredTag({ address: v, name: v, symbolCrc: undefined }, i);
+        }
+        return { name: v, address: v, datatype: undefined, symbolic: !isRawHexAccessString(v) };
     }
 
     const address = v.address || v.symbol;
@@ -36,7 +38,10 @@ function normalizeSymbol(v, i) {
     if (isSymbolicName(v.name)) {
         return { name: v.name, address: v.name, datatype: v.datatype, symbolic: true };
     }
-    return { name: v.name || address, address, datatype: v.datatype, symbolic: false };
+    assertCrcSecuredTag(
+        { address, name: v.name || address, symbolCrc: v.symbolCrc },
+        i
+    );
 }
 
 function resolveValueForSymbol(payload, symbol, isOnlySymbol) {
@@ -131,11 +136,12 @@ module.exports = function (RED) {
                 }
 
                 // Symbolic tags must be resolved to a hex address + CRC
-                // before writing (resolveAndWrite); hex tags go straight
-                // to the CRC-aware writeTags. Same split as the read node.
+                // before writing (resolveAndWrite); CRC-secured hex tags go
+                // straight to writeTags. Same split as the read node.
                 const symbolicTags = tags.filter(t => t.symbolic);
-                const hexTags = tags.filter(t => !t.symbolic);
+                const crcSecuredTags = tags.filter(t => !t.symbolic);
 
+                node.status({ fill: 'blue', shape: 'ring', text: 'writing' });
                 const t0 = Date.now();
                 try {
                     // Merge per-tag results from both write paths into a
@@ -144,8 +150,8 @@ module.exports = function (RED) {
                     if (symbolicTags.length > 0) {
                         Object.assign(result, await node.endpoint.resolveAndWrite(symbolicTags));
                     }
-                    if (hexTags.length > 0) {
-                        Object.assign(result, await node.endpoint.writeTags(hexTags));
+                    if (crcSecuredTags.length > 0) {
+                        Object.assign(result, await node.endpoint.writeTags(crcSecuredTags));
                     }
 
                     const elapsed = Date.now() - t0;
@@ -180,3 +186,5 @@ module.exports = function (RED) {
 
     RED.nodes.registerType('s7-plus write', S7ComPlusOut);
 };
+
+module.exports.normalizeSymbol = normalizeSymbol;

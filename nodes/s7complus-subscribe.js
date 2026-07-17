@@ -3,6 +3,7 @@
 const { isHexAddress, isSymbolicName } = require('../lib/s7plus/tag-routing');
 const { formatOutputPayload } = require('../lib/s7plus/read-result');
 const { decodeReadValue } = require('../lib/s7plus/pvalue-codec');
+const { OutputMsgQueue } = require('../lib/s7plus/output-msg-queue');
 const { parseAddSymbols, parseMsgSymbols } = require('./s7complus-in');
 
 // Minimum cycle accepted by the PLC. The breakpoint test showed every tested
@@ -244,8 +245,18 @@ module.exports = function (RED) {
             render();
         }
 
-        function emitNotification(noti, refToName) {
-            if (!refToName) return;
+        const outputQueue = new OutputMsgQueue((batch) => {
+            if (batch.length === 0) return;
+            node.send(batch);
+            render();
+        }, {
+            onOverflow: ({ dropped, remaining }) => {
+                node.warn(`output queue overflow: dropped ${dropped} oldest msg(s), ${remaining} remaining`);
+            }
+        });
+
+        function buildOutputMsg(noti, refToName) {
+            if (!refToName) return null;
             const msgTimestamp = new Date();
             const result = {};
             for (const [ref, info] of refToName) {
@@ -273,7 +284,7 @@ module.exports = function (RED) {
             }
 
             const changed = Object.keys(result);
-            if (changed.length === 0) return; // empty change cycle -> no message
+            if (changed.length === 0) return null;
 
             for (const name of changed) {
                 const entry = result[name];
@@ -287,12 +298,11 @@ module.exports = function (RED) {
             }
 
             const order = [...refToName.values()].map((v) => v.name);
-            node.send({
+            lastOwn = { fill: 'green', shape: 'dot', text: `update ${changed.length} (#${noti.seqNum % 1000})` };
+            return {
                 payload: formatOutputPayload(result, order, config.outputFormat),
                 timestamp: msgTimestamp
-            });
-            lastOwn = { fill: 'green', shape: 'dot', text: `update ${changed.length} (#${noti.seqNum % 1000})` };
-            render();
+            };
         }
 
         /**
@@ -328,12 +338,11 @@ module.exports = function (RED) {
                 entry.lastSentAt = now;
             }
 
-            node.send({
+            lastOwn = { fill: 'green', shape: 'dot', text: `resent ${stale.length}` };
+            outputQueue.enqueue({
                 payload: formatOutputPayload(result, stale, config.outputFormat),
                 timestamp: msgTimestamp
             });
-            lastOwn = { fill: 'green', shape: 'dot', text: `resent ${stale.length}` };
-            render();
         }
 
         function stopResendTimer() {
@@ -350,7 +359,10 @@ module.exports = function (RED) {
 
         const onEvent = (event) => {
             if (event.type === 'status') applyStatus(event);
-            else if (event.type === 'data') emitNotification(event.noti, event.refToName);
+            else if (event.type === 'data') {
+                const msg = buildOutputMsg(event.noti, event.refToName);
+                if (msg) outputQueue.enqueue(msg);
+            }
         };
 
         async function applySubscription(symbols, inputMeta = {}) {
@@ -470,6 +482,7 @@ module.exports = function (RED) {
         node.on('close', (...args) => {
             const { removed, done } = parseCloseArgs(args);
             stopResendTimer();
+            outputQueue.reset();
             if (removed) {
                 clearSubscriptionState(node.id, nodeContext());
                 Promise.resolve(node.endpoint.unsubscribe(node.id)).finally(() => done());

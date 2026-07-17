@@ -69,6 +69,13 @@ describe('resolveSubscribePaths', () => {
             []
         );
     });
+
+    it('rejects hex string in msg.addSymbols', () => {
+        assert.throws(
+            () => resolveSubscribePaths({ addSymbols: ['8A0E0001.A'] }, editorSymbols),
+            /msg\.addSymbols\[0\]: hex access string requires a symbolic name or symbolCrc/
+        );
+    });
 });
 
 describe('pathsEqual', () => {
@@ -624,17 +631,35 @@ describe('endpoint resubscribe', () => {
         return new Ctor({ id: 'ep', address: '', timeout: 5000 });
     }
 
+    function flatExploreSymbol(name, accessSequence = '8A0E0001.A', computedCrc = 0x1234) {
+        return {
+            name,
+            accessSequence,
+            computedCrc,
+            softdatatypeName: 'DInt'
+        };
+    }
+
+    function primeConnectedClient(node) {
+        node.client._connected = true;
+        Object.defineProperty(node.client, 'socketAlive', { get: () => true, configurable: true });
+    }
+
+    function installExplore(client, symbolNames) {
+        client.browseFull = async () => ({
+            symbols: symbolNames.map((name) => flatExploreSymbol(name))
+        });
+    }
+
+    const DB1_SYMBOLS = ['DB1.a', 'DB1.b', 'DB1.sym1', 'DB1.sym2'];
+
     it('deletes the old PLC subscription before creating a new one', async () => {
         const deleted = [];
         const created = [];
         const node = buildEndpoint();
         node.client._connected = true;
-        node.client.browseResolveSymbolicBatch = async (paths) =>
-            paths.map(() => ({
-                address: '8A0E0001.A',
-                crcMeta: { memberName: 'Test2', softdatatype: 'DInt' },
-                datatype: 'DInt'
-            }));
+        primeConnectedClient(node);
+        installExplore(node.client, DB1_SYMBOLS);
         node.client.deleteSubscription = async (id) => { deleted.push(id); };
         node.client.createSubscription = async () => {
             const id = created.length + 1;
@@ -656,12 +681,8 @@ describe('endpoint resubscribe', () => {
         const created = [];
         const node = buildEndpoint();
         node.client._connected = true;
-        node.client.browseResolveSymbolicBatch = async (paths) =>
-            paths.map(() => ({
-                address: '8A0E0001.A',
-                crcMeta: { memberName: 'Test2', softdatatype: 'DInt' },
-                datatype: 'DInt'
-            }));
+        primeConnectedClient(node);
+        installExplore(node.client, DB1_SYMBOLS);
         node.client.deleteSubscription = async (id) => { deleted.push(id); };
         node.client.createSubscription = async () => {
             const id = created.length + 1;
@@ -680,12 +701,8 @@ describe('endpoint resubscribe', () => {
         const created = [];
         const node = buildEndpoint();
         node.client._connected = true;
-        node.client.browseResolveSymbolicBatch = async (paths) =>
-            paths.map(() => ({
-                address: '8A0E0001.A',
-                crcMeta: { memberName: 'Test2', softdatatype: 'DInt' },
-                datatype: 'DInt'
-            }));
+        primeConnectedClient(node);
+        installExplore(node.client, DB1_SYMBOLS);
         node.client.deleteSubscription = async (id) => { deleted.push(id); };
         node.client.createSubscription = async (opts) => {
             const id = created.length + 1;
@@ -702,12 +719,8 @@ describe('endpoint resubscribe', () => {
     it('replays a notification that raced the CreateObject response', async () => {
         const node = buildEndpoint();
         node.client._connected = true;
-        node.client.browseResolveSymbolicBatch = async (paths) =>
-            paths.map(() => ({
-                address: '8A0E0001.A',
-                crcMeta: { memberName: 'Test2', softdatatype: 'DInt' },
-                datatype: 'DInt'
-            }));
+        primeConnectedClient(node);
+        installExplore(node.client, DB1_SYMBOLS);
         node.client.createSubscription = async () => {
             // Simulate the PLC pushing the initial full-value snapshot in
             // the same TCP segment as the CreateObject response: the
@@ -735,12 +748,8 @@ describe('endpoint resubscribe', () => {
     it('discards buffered notifications of a deleted subscription (no stale replay on id reuse)', async () => {
         const node = buildEndpoint();
         node.client._connected = true;
-        node.client.browseResolveSymbolicBatch = async (paths) =>
-            paths.map(() => ({
-                address: '8A0E0001.A',
-                crcMeta: { memberName: 'Test2', softdatatype: 'DInt' },
-                datatype: 'DInt'
-            }));
+        primeConnectedClient(node);
+        installExplore(node.client, DB1_SYMBOLS);
         node.client.deleteSubscription = async () => {};
         let createCount = 0;
         node.client.createSubscription = async () => {
@@ -778,12 +787,8 @@ describe('endpoint resubscribe', () => {
         const created = [];
         const node = buildEndpoint();
         node.client._connected = true;
-        node.client.browseResolveSymbolicBatch = async (paths) =>
-            paths.map(() => ({
-                address: '8A0E0001.A',
-                crcMeta: { memberName: 'Test2', softdatatype: 'DInt' },
-                datatype: 'DInt'
-            }));
+        primeConnectedClient(node);
+        installExplore(node.client, DB1_SYMBOLS);
         node.client.deleteSubscription = async (id) => { deleted.push(id); };
         node.client.createSubscription = async () => {
             // Slow create: without per-owner serialization both concurrent
@@ -813,12 +818,8 @@ describe('endpoint resubscribe', () => {
         const created = [];
         const node = buildEndpoint();
         node.client._connected = true;
-        node.client.browseResolveSymbolicBatch = async (paths) =>
-            paths.map(() => ({
-                address: '8A0E0001.A',
-                crcMeta: { memberName: 'Test2', softdatatype: 'DInt' },
-                datatype: 'DInt'
-            }));
+        primeConnectedClient(node);
+        installExplore(node.client, DB1_SYMBOLS);
         node.client.deleteSubscription = async (id) => { deleted.push(id); };
         node.client.createSubscription = async () => {
             await new Promise((r) => setTimeout(r, 20));
@@ -843,12 +844,8 @@ describe('endpoint resubscribe', () => {
     it('does not flag seqNum jumps as loss (RouteMode 0x20 skips empty cycles)', async () => {
         const node = buildEndpoint();
         node.client._connected = true;
-        node.client.browseResolveSymbolicBatch = async (paths) =>
-            paths.map(() => ({
-                address: '8A0E0001.A',
-                crcMeta: { memberName: 'Test2', softdatatype: 'DInt' },
-                datatype: 'DInt'
-            }));
+        primeConnectedClient(node);
+        installExplore(node.client, DB1_SYMBOLS);
         node.client.createSubscription = async () =>
             ({ subscriptionObjectId: 5, refToName: new Map([[1, { name: 'DB1.a', datatype: 'Int' }]]) });
 
@@ -875,16 +872,11 @@ describe('endpoint resubscribe', () => {
     it('heals a partially established subscription once the missing symbol resolves', async () => {
         const node = buildEndpoint();
         node.client._connected = true;
+        primeConnectedClient(node);
         let resolvable = false; // DB1.b not on the PLC yet
-        node.client.browseResolveSymbolicBatch = async (paths) =>
-            paths.map((p) => {
-                if (p === 'DB1.b' && !resolvable) return { error: 'DB1.b not found in DB1' };
-                return {
-                    address: '8A0E0001.A',
-                    crcMeta: { memberName: 'Test2', softdatatype: 'DInt' },
-                    datatype: 'DInt'
-                };
-            });
+        node.client.browseFull = async () => ({
+            symbols: (resolvable ? ['DB1.a', 'DB1.b'] : ['DB1.a']).map((name) => flatExploreSymbol(name))
+        });
         const deleted = [];
         node.client.deleteSubscription = async (id) => { deleted.push(id); };
         let created = 0;
@@ -929,12 +921,8 @@ describe('endpoint resubscribe', () => {
     it('retries a failed establish via retryFailedSubscriptions with backoff', async () => {
         const node = buildEndpoint();
         node.client._connected = true;
-        node.client.browseResolveSymbolicBatch = async (paths) =>
-            paths.map(() => ({
-                address: '8A0E0001.A',
-                crcMeta: { memberName: 'Test2', softdatatype: 'DInt' },
-                datatype: 'DInt'
-            }));
+        primeConnectedClient(node);
+        installExplore(node.client, DB1_SYMBOLS);
         let attempts = 0;
         node.client.createSubscription = async () => {
             attempts++;

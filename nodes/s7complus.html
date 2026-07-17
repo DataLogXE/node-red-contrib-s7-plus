@@ -859,6 +859,8 @@
                 <li>Only an <b>array of strings</b> is accepted, e.g.
                 <code>[ "Motor.speed", "Pump.on" ]</code>. Any other type
                 (objects, single string, etc.) is rejected with an error.</li>
+                <li>Only <b>symbolic</b> path strings are supported (CRC-secured).
+                Hex access strings without <code>symbolCrc</code> are rejected.</li>
             </ul></dd>
 
         <dt class="optional">addSymbols <span class="property-type">string[]</span></dt>
@@ -870,7 +872,8 @@
                 does not replace them).</li>
                 <li>A symbol that appears in both is read only once.</li>
                 <li>Only symbolic path strings are supported (same as names from
-                <b>S7+ Explore</b> or <b>Pick from PLC</b>).</li>
+                <b>S7+ Explore</b> or <b>Pick from PLC</b>). Hex access strings
+                are rejected.</li>
             </ul>
             Leave <code>msg.addSymbols</code> unset to read only the base symbol list.</dd>
     </dl>
@@ -1150,7 +1153,9 @@ return msg;</pre>
             <code>[ "Motor.speed", "Pump.on" ]</code> (objects like
             <code>{ "name": "Motor.speed" }</code> also work). The values for these
             symbols still come from <code>msg.payload</code>, using the same rules
-            as above.</dd>
+            as above. Only <b>symbolic</b> paths or CRC-secured entries
+            (<code>symbolCrc</code> from explore) are accepted; hex-only access
+            strings are rejected.</dd>
     </dl>
 
     <h3>Outputs</h3>
@@ -1367,10 +1372,11 @@ return msg;</pre>
         <dt class="optional">addSymbols <span class="property-type">string[]</span></dt>
         <dd><b>Merges</b> additional symbolic paths with the base list (editor or
         <code>msg.symbols</code>). Duplicates are removed. Only path strings — same as
-        <b>S7+ Explore</b> / <b>Pick from PLC</b> output.</dd>
+        <b>S7+ Explore</b> / <b>Pick from PLC</b> output. Hex access strings are rejected.</dd>
     </dl>
     <p>Only <b>symbolic</b> paths are supported (CRC-secured). Hex access strings in
-    <code>msg.symbols</code> are ignored. If no paths remain, input fails with
+    <code>msg.symbols</code> are ignored; hex strings in <code>msg.addSymbols</code>
+    are rejected. If no paths remain, input fails with
     <i>No symbols configured</i>.</p>
 
     <h3>Output properties</h3>

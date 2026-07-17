@@ -28,7 +28,7 @@ function mockTypeOb(relId, names, elements) {
 }
 
 describe('browse-flat buildFlatSymbolList', () => {
-    it('lists leaf member under a DB root', () => {
+    it('lists leaf member under a DB root', async () => {
         const dbRel = 0x8a0e0001;
         const tiRel = 0x100;
         const oitLeaf = {
@@ -47,7 +47,7 @@ describe('browse-flat buildFlatSymbolList', () => {
             db_number: 1,
             db_block_ti_relid: tiRel
         }];
-        const result = buildFlatSymbolList(dbList, [typeOb]);
+        const result = await buildFlatSymbolList(dbList, [typeOb]);
         const symbols = result.symbols;
         assert.equal(symbols.length, 1);
         assert.equal(symbols[0].name, 'Data.speed');
@@ -55,7 +55,7 @@ describe('browse-flat buildFlatSymbolList', () => {
         assert.equal(symbols[0].softdatatypeName, 'Real');
     });
 
-    it('expands 1D array of primitives', () => {
+    it('expands 1D array of primitives', async () => {
         const tiRel = 0x200;
         const oitArr = {
             is1Dim: () => true,
@@ -73,14 +73,14 @@ describe('browse-flat buildFlatSymbolList', () => {
             db_number: 2,
             db_block_ti_relid: tiRel
         }];
-        const result = buildFlatSymbolList(dbList, [typeOb]);
+        const result = await buildFlatSymbolList(dbList, [typeOb]);
         const symbols = result.symbols;
         assert.equal(symbols.length, 2);
         assert.equal(symbols[0].name, 'DB2.arr[0]');
         assert.equal(symbols[1].name, 'DB2.arr[1]');
     });
 
-    it('nests struct members via relation id', () => {
+    it('nests struct members via relation id', async () => {
         const tiRel = 0x300;
         const structRel = 0x301;
         const oitStruct = {
@@ -106,14 +106,14 @@ describe('browse-flat buildFlatSymbolList', () => {
             db_number: 3,
             db_block_ti_relid: tiRel
         }];
-        const result = buildFlatSymbolList(dbList, [dbType, structType]);
+        const result = await buildFlatSymbolList(dbList, [dbType, structType]);
         const symbols = result.symbols;
         assert.equal(symbols.length, 1);
         assert.equal(symbols[0].name, 'S.nested.flag');
         assert.equal(symbols[0].accessSequence, '8A0E0003.1.2');
     });
 
-    it('caps flat symbol count and sets limitExceeded when maxSymbols is reached', () => {
+    it('caps flat symbol count and sets limitExceeded when maxSymbols is reached', async () => {
         const tiRel = 0x400;
         const oitArr = {
             is1Dim: () => true,
@@ -131,13 +131,13 @@ describe('browse-flat buildFlatSymbolList', () => {
             db_number: 4,
             db_block_ti_relid: tiRel
         }];
-        const result = buildFlatSymbolList(dbList, [typeOb], { maxSymbols: 3 });
+        const result = await buildFlatSymbolList(dbList, [typeOb], { maxSymbols: 3 });
         assert.equal(result.symbols.length, 3);
         assert.equal(result.limitExceeded, true);
         assert.equal(result.maxSymbols, 3);
     });
 
-    it('sets limitExceeded when a single array is larger than maxSymbols', () => {
+    it('sets limitExceeded when a single array is larger than maxSymbols', async () => {
         const tiRel = 0x500;
         const oitArr = {
             is1Dim: () => true,
@@ -155,12 +155,12 @@ describe('browse-flat buildFlatSymbolList', () => {
             db_number: 5,
             db_block_ti_relid: tiRel
         }];
-        const result = buildFlatSymbolList(dbList, [typeOb], { maxSymbols: 5 });
+        const result = await buildFlatSymbolList(dbList, [typeOb], { maxSymbols: 5 });
         assert.equal(result.limitExceeded, true);
         assert.equal(result.symbols.length, 5);
     });
 
-    it('includes only selected areas when scope.everything is false', () => {
+    it('includes only selected areas when scope.everything is false', async () => {
         const dbTi = 0x600;
         const areaTi = 0x90010000;
         const oitLeaf = {
@@ -179,7 +179,7 @@ describe('browse-flat buildFlatSymbolList', () => {
             db_block_ti_relid: dbTi
         }];
         const scope = { everything: false, dbs: ['DB6'], areas: ['IArea'] };
-        const result = buildFlatSymbolList(dbList, [dbType, areaType], { scope });
+        const result = await buildFlatSymbolList(dbList, [dbType, areaType], { scope });
         const names = result.symbols.map(s => s.name);
         assert.ok(names.includes('DB6.dbVal'));
         assert.ok(names.includes('IArea.inVal'));

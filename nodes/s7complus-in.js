@@ -1,6 +1,6 @@
 'use strict';
 
-const { isHexAddress, isSymbolicName } = require('../lib/s7plus/tag-routing');
+const { isHexAddress, isRawHexAccessString, isSymbolicName, assertCrcSecuredTag } = require('../lib/s7plus/tag-routing');
 const { formatOutputPayload } = require('../lib/s7plus/read-result');
 
 /**
@@ -9,12 +9,14 @@ const { formatOutputPayload } = require('../lib/s7plus/read-result');
  *   1. Pre-computed symbolCrc + hex address → readTags with CRC (already secured)
  *   2. Symbolic address (no hex) → resolveAndRead
  *   3. Hex address + symbolic name → resolveAndRead (CRC protection for browsed vars)
- *   4. Hex address only → readTags without CRC (legacy)
  */
 function normalizeTag(t, i) {
     if (!t) throw new Error(`Symbol #${i} is empty`);
     if (typeof t === 'string') {
-        return { name: t, address: t, symbolic: !isHexAddress(t) };
+        if (isRawHexAccessString(t)) {
+            assertCrcSecuredTag({ address: t, name: t, symbolCrc: undefined }, i);
+        }
+        return { name: t, address: t, symbolic: !isRawHexAccessString(t) };
     }
     if (typeof t === 'object') {
         if (t.address) {
@@ -48,12 +50,10 @@ function normalizeTag(t, i) {
                 };
             }
 
-            return {
-                name: t.name || t.address,
-                address: t.address,
-                datatype: t.datatype,
-                symbolic: false
-            };
+            assertCrcSecuredTag(
+                { address: t.address, name: t.name || t.address, symbolCrc: t.symbolCrc },
+                i
+            );
         }
         if (t.symbol) {
             return { name: t.name || t.symbol, address: t.symbol, symbolic: true };
@@ -68,6 +68,13 @@ function parseAddSymbols(msg) {
     }
     if (!msg.addSymbols.every(s => typeof s === 'string')) {
         return [];
+    }
+    for (let i = 0; i < msg.addSymbols.length; i++) {
+        if (isRawHexAccessString(msg.addSymbols[i])) {
+            throw new Error(
+                `msg.addSymbols[${i}]: hex access string requires a symbolic name or symbolCrc`
+            );
+        }
     }
     return msg.addSymbols;
 }
@@ -125,7 +132,13 @@ module.exports = function (RED) {
             try {
                 // Additional symbolic paths from msg.addSymbols (string[]) are merged
                 // with configured or msg.symbols tags. Duplicates are removed.
-                const addPaths = parseAddSymbols(msg);
+                let addPaths;
+                try {
+                    addPaths = parseAddSymbols(msg);
+                } catch (e) {
+                    done(e);
+                    return;
+                }
 
                 // msg.symbols (string[]) overrides the configured symbols for this
                 // one message. Only a plain array of strings is accepted.
@@ -150,11 +163,11 @@ module.exports = function (RED) {
                 }
 
                 const configuredSymbolicPaths = tags.filter(t => t.symbolic).map(t => t.address);
-                const hexTags = tags.filter(t => !t.symbolic);
+                const crcSecuredTags = tags.filter(t => !t.symbolic);
 
                 const allSymbolicPaths = [...new Set([...configuredSymbolicPaths, ...addPaths])];
 
-                if (allSymbolicPaths.length === 0 && hexTags.length === 0) {
+                if (allSymbolicPaths.length === 0 && crcSecuredTags.length === 0) {
                     done(new Error('No symbols configured'));
                     return;
                 }
@@ -170,13 +183,13 @@ module.exports = function (RED) {
                         Object.assign(result, symbolicResult);
                     }
 
-                    if (hexTags.length > 0) {
-                        const hexResult = await node.endpoint.readTags(hexTags);
-                        Object.assign(result, hexResult);
+                    if (crcSecuredTags.length > 0) {
+                        const crcResult = await node.endpoint.readTags(crcSecuredTags);
+                        Object.assign(result, crcResult);
                     }
 
                     const elapsed = Date.now() - t0;
-                    const outputOrder = [...allSymbolicPaths, ...hexTags.map((t) => t.name)];
+                    const outputOrder = [...allSymbolicPaths, ...crcSecuredTags.map((t) => t.name)];
                     msg.payload = formatOutputPayload(result, outputOrder, config.outputFormat);
                     const allTags = Object.values(result);
                     const failed = allTags.filter(t => t.status !== 'ok').length;
@@ -207,3 +220,4 @@ module.exports = function (RED) {
 
 module.exports.parseAddSymbols = parseAddSymbols;
 module.exports.parseMsgSymbols = parseMsgSymbols;
+module.exports.normalizeTag = normalizeTag;

@@ -278,36 +278,47 @@ describe('S7CommPlusClient: dispatcher', () => {
         assert.equal(client._pendingResponses.size, 0);
     });
 
-    it('framing error (non-0x72 prefix) rejects pending and clears state', async () => {
+    it('garbage bytes resync the stream without tearing down the session', async () => {
+        // The old logic treated a non-0x72 prefix as fatal and rejected
+        // every pending response. With arbitrary TLS chunk boundaries a
+        // desync is recoverable: skip to the next sync byte and keep the
+        // session alive.
         const client = new S7CommPlusClient();
         client._connected = true;
         client._transport.disconnect = () => 0;
-        const pending = client._waitForResponse(1, 'op', 5000);
 
-        // Hand the receive pipeline garbage.
+        let dispatched = null;
+        client._dispatchPdu = (pdu) => { dispatched = pdu; };
+
+        // Garbage first, then a complete valid frame in the same stream.
         client._onDataReceived(Buffer.from([0xff, 0, 0, 0]));
+        const payload = Buffer.from([0x32, 0x03, 0x07]);
+        client._onDataReceived(Buffer.concat([
+            Buffer.from([0x72, 0x02, 0x00, payload.length]),
+            payload,
+            Buffer.from([0x72, 0x02, 0x00, 0x00])
+        ]));
 
-        await assert.rejects(pending, /Client not connected.*framing-error/);
-        assert.equal(client._pendingResponses.size, 0);
-        assert.equal(client._tempPdu, null);
+        assert.ok(dispatched, 'valid frame after garbage must still dispatch');
+        assert.deepEqual(dispatched.subarray(1), payload, 'no garbage glued into the PDU');
+        assert.ok(client._frames.resyncSkippedBytes >= 4, 'resync must be accounted');
     });
 
     it('connect() clears any leftover receive state from a prior broken session', async () => {
         const client = new S7CommPlusClient();
-        // Simulate a half-broken state: pending response, partial buffer.
+        // Simulate a half-broken state: pending response, partial frame buffered.
         client._connected = true;
         client._transport.disconnect = () => 0;
         const orphan = client._waitForResponse(99, 'orphan', 5000);
-        client._tempPdu = [Buffer.from([1, 2, 3])];
-        client._needMoreData = true;
+        client._frames.push(Buffer.from([0x72, 0x02, 0x00, 0x10, 1, 2, 3])); // incomplete body
+        assert.equal(client._frames.hasPartial, true);
 
         // We can't run real connect (no PLC), but we can verify the
         // reset path independently.
         client._resetReceiveState('connect');
 
         assert.equal(client._pendingResponses.size, 0);
-        assert.equal(client._tempPdu, null);
-        assert.equal(client._needMoreData, false);
+        assert.equal(client._frames.hasPartial, false);
         await assert.rejects(orphan, /Client not connected.*connect/);
     });
 });
@@ -376,7 +387,7 @@ describe('S7CommPlusClient: receive reassembly (Fix 1)', () => {
         ]);
         client._onDataReceived(frag1);
         assert.equal(dispatched, null, 'first fragment must not finalize');
-        assert.equal(client._needMoreData, true);
+        assert.equal(client._frames.hasPartial, true);
 
         // Second fragment: header carries 0x72 protoVer lenHi lenLo
         // for THIS slice + the trailing tail so total bytes after the
@@ -454,7 +465,7 @@ describe('S7CommPlusClient: liveness tracking (Fix 3)', () => {
 
         client._onDataReceived(firstFragment);
 
-        assert.equal(client._needMoreData, true,
+        assert.equal(client._frames.hasPartial, true,
             'first fragment must NOT finalize (so _dispatchPdu was not called)');
         assert.ok(client.lastResponseAt > before,
             `lastResponseAt must advance on every frame, even mid-PDU ` +
