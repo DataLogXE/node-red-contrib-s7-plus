@@ -75,7 +75,7 @@ Writing works the same way: pick the tags, then send the value(s) in `msg.payloa
 | Byte, Word, DWord                        | `number`        |                                                                      |
 | LWord                                    | `BigInt`        | 64-bit, exceeds JS number                                            |
 | Char, WChar                              | `string`        | single character                                                     |
-| String, WString                          | `string`        |                                                                      |
+| String, WString                          | `string`        | write: text longer than the declared length, or a `String` with characters outside ISO-8859-1, is rejected per tag (not truncated) |
 | SInt, Int, DInt, USInt, UInt, UDInt      | `number`        |                                                                      |
 | LInt, ULInt                              | `BigInt`        |                                                                      |
 | Real, LReal                              | `number`        |                                                                      |
@@ -101,7 +101,7 @@ Writing works the same way: pick the tags, then send the value(s) in `msg.payloa
 
 ## Examples
 
-Example flows live in `[examples/](examples/)`. They target the test data blocks in `[plc/s7-1500/](plc/s7-1500/)` (S7-1500, optimized access).
+Example flows live in [examples/](examples/). They target the test data blocks in [plc/s7-1500/](plc/s7-1500/) (S7-1500, optimized access).
 
 **PLC setup:** import the `DB_*.db` sources and `FB_TestSignalGenerator.scl` from `plc/s7-1500/` into your TIA Portal project. Call `FB_TestSignalGenerator` in the main cycle OB (e.g. OB1) so `DB_TestSignals` is filled with animated test values, then compile and download to the PLC.
 
@@ -110,11 +110,11 @@ Example flows live in `[examples/](examples/)`. They target the test data blocks
 
 | File                                                                                | Purpose                                                                                                                                                                                                           |
 | ----------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `[explore-symbols-flow.json](examples/explore-symbols-flow.json)`                   | Symbol catalog browse — full PLC tree, scoped DB/area browse (static + `msg.exploreScope`), `msg.infos` formats, output limit demo, and Explore → Read pipeline for `DB_TestSignals`.                             |
-| `[read-multiple-values-flow.json](examples/read-multiple-values-flow.json)`         | Read multiple values in one request — static symbol list in the read node, plus a second path with the same symbols via runtime `msg.symbols`.                                                                    |
-| `[read-write-single-values-flow.json](examples/read-write-single-values-flow.json)` | Manual write tests — one inject per scalar constant writes to the matching `*_write` tag; each datatype group includes a read-back row. Covers Binary through Timers; hardware and system datatypes are excluded. |
-| `[verify-read-write-values-flow.json](examples/verify-read-write-values-flow.json)` | Automated verification — one inject runs write → read-back → compare for every scalar constant across all datatypes. Emits one result per datatype and a final summary.                                           |
-| `[subscribe-values-flow.json](examples/subscribe-values-flow.json)`                 | Native subscription — static `DB_TestSignals` symbols on deploy (object format) with per-symbol extraction; dynamic `msg.symbols` via inject (array format).                                                      |
+| [explore-symbols-flow.json](examples/explore-symbols-flow.json)                   | Symbol catalog browse — full PLC tree, scoped DB/area browse (static + `msg.exploreScope`), `msg.infos` formats, output limit demo, and Explore → Read pipeline for `DB_TestSignals`.                             |
+| [read-multiple-values-flow.json](examples/read-multiple-values-flow.json)         | Read multiple values in one request — static symbol list in the read node, plus a second path with the same symbols via runtime `msg.symbols`.                                                                    |
+| [read-write-single-values-flow.json](examples/read-write-single-values-flow.json) | Manual write tests — one inject per scalar constant writes to the matching `*_write` tag; each datatype group includes a read-back row. Covers Binary through Timers; hardware and system datatypes are excluded. |
+| [verify-read-write-values-flow.json](examples/verify-read-write-values-flow.json) | Automated verification — one inject runs write → read-back → compare for every scalar constant across all datatypes. Emits one result per datatype and a final summary.                                           |
+| [subscribe-values-flow.json](examples/subscribe-values-flow.json)                 | Native subscription — static `DB_TestSignals` symbols on deploy (object format) with per-symbol extraction; dynamic `msg.symbols` via inject (array format).                                                      |
 
 
 

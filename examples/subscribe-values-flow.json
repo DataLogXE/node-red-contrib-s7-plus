@@ -238,7 +238,7 @@
         "type": "comment",
         "z": "subscribe_tab",
         "name": "2) Dynamic: msg.symbols via inject (array format)",
-        "info": "Inject nodes add symbols at runtime; Clear resets the subscription.",
+        "info": "Each inject replaces the subscribed symbols at runtime (msg.symbols replaces, it does not add; use msg.addSymbols to add). Clear sends an empty list: the node falls back to its own symbol list, which is empty here, so the subscription stops.",
         "x": 240,
         "y": 500,
         "wires": []

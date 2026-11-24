@@ -34,7 +34,7 @@ const TYPE_CONTRACT = {
     Byte:        'number',
     Word:        'number',
     DWord:       'number',
-    LWord:       'number',
+    LWord:       'bigint',
     Char:        'string',
     WChar:       'string',
     String:      'string',
@@ -120,11 +120,15 @@ function valuesMatch(actual, expected, s7type) {
         case 'ULInt':
         case 'LTime':
         case 'LTod':
-            return BigInt(actual) === BigInt(expected);
         case 'LWord':
-            if (typeof expected === 'bigint') return actual === Number(expected);
-            return actual === expected;
+            return BigInt(actual) === BigInt(expected);
         case 'Date':
+            // Date is a calendar day: the codec maps it to LOCAL midnight in
+            // both directions, so compare the local Y/M/D, not the UTC instant.
+            if (!(actual instanceof Date) || !(expected instanceof Date)) return false;
+            return actual.getFullYear() === expected.getFullYear()
+                && actual.getMonth() === expected.getMonth()
+                && actual.getDate() === expected.getDate();
         case 'Ldt':
         case 'Dtl':
         case 'DateAndTime': {

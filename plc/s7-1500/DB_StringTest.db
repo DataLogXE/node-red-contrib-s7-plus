@@ -1,0 +1,41 @@
+﻿DATA_BLOCK "DB_StringTest"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+NON_RETAIN
+   VAR
+      S_Len1 : String[1];   // String: declared length 1
+      S_Len2 : String[2];   // String: declared length 2
+      S_Len10 : String[10];   // String: declared length 10 (GitHub issue 2)
+      S_Len80 : String[80];   // String: declared length 80
+      S_Len253 : String[253];   // String: declared length 253
+      S_Len254 : String[254];   // String: explicit maximum length
+      S_Default : String;   // String: default length 254
+      S_Init : String[20];   // String: with start value "Init äöü"
+      W_Len1 : WString[1];   // WString: declared length 1
+      W_Len2 : WString[2];   // WString: declared length 2
+      W_Len10 : WString[10];   // WString: declared length 10
+      W_Len80 : WString[80];   // WString: declared length 80
+      W_Len254 : WString[254];   // WString: explicit default length
+      W_Default : WString;   // WString: default length 254
+      W_Len255 : WString[255];   // WString: first length above 254
+      W_Len1000 : WString[1000];   // WString: declared length 1000
+      W_Len4000 : WString[4000];   // WString: declared length 4000
+      W_Len16382 : WString[16382];   // WString: maximum length
+      W_Init : WString[20];   // WString: with start value
+      S_Arr : Array[0..3] of String[8];   // Array of String[8]
+      W_Arr : Array[0..3] of WString[8];   // Array of WString[8]
+      St : Struct   // Struct with strings
+         S5 : String[5];   // String[5] in struct
+         W5 : WString[5];   // WString[5] in struct
+         Num : Int;   // Int between and after strings
+      END_STRUCT;
+      Guard : Int;   // Must stay 12345: detects writes beyond a string
+   END_VAR
+
+
+BEGIN
+   S_Init := 'Init äöü';
+   W_Init := WSTRING#'Init ΣΛΔ';
+   Guard := 12345;
+
+END_DATA_BLOCK

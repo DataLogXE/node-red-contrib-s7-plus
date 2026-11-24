@@ -5,7 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.3.1] - 2026-11-23
+
+### Fixed
+
+- Subscriptions are now really deleted on the PLC: the `DeleteObject` request was missing the `0x00` byte and object qualifier after the object id, so the PLC rejected it, kept sending notifications and kept the subscription slot until disconnect. Every resubscribe/unsubscribe at runtime leaked one PLC subscription (limit 250).
+- `deleteSubscription` evaluates the PLC return value and throws on failure instead of silently reporting success.
+- Writing to a `String[n]` / `WString[n]` with a declared length other than 254 no longer fails with `PLC: Write error (0x80098d00…ffc3)` ([#2](https://github.com/DataLogXE/node-red-contrib-s7-plus/issues/2)). The write now carries the declared length of the target, which is read from the PLC once per address and cached.
+- Large requests no longer reset the PLC connection: fragments of a request above one COTP TPDU (e.g. writing a `WString[1000]`) could be merged into a single TLS record larger than 1024 bytes, which the PLC answers with a TCP reset. Each fragment is now sent as its own TLS record.
+- *Pick from PLC* / scope dialog no longer fails with `Browse failed` when the Node-RED editor runs under a sub-path (`httpAdminRoot`, reverse proxy) ([#1](https://github.com/DataLogXE/node-red-contrib-s7-plus/issues/1)). The browse requests now use a URL relative to the editor page.
+- Live test scripts: `live-browse.js` loads the current `pvalue-codec` module; `live-datatype-rw.js` expects `BigInt` for LWord and compares Date by local calendar day (matches README type contract).
+
+### Changed
+
+- A text that does not fit the target string is no longer silently altered. A text longer than the declared length, or a `String` text with characters outside ISO-8859-1 (e.g. `€`, `Σ`), is rejected with a per-tag error and not written; other tags of the same message are still written. Previously the text was truncated at 254 characters or the characters were corrupted.
+- Browse errors in the editor are more specific: instead of a bare `Browse failed` the dialog shows the HTTP status and a hint (e.g. route not found → restart Node-RED after installing or updating; no permission; no response from Node-RED). Failed browse requests are also logged as a warning in the Node-RED log with the PLC address.
+- Editor browse sessions (for endpoints that are not deployed yet) hold fewer PLC connections: one connection per PLC address is shared by all open dialogs, the connection is released when the dialog closes, and an unused session is closed after 2 minutes (previously 15 minutes, and only checked when the next session was opened).
+
+### Added
+
+- Unit tests for `DeleteObject` request layout and response decoding.
+- Unit tests for `String[n]` / `WString[n]` encoding and the write path (`test/string-write.test.js`), live tests `test/scripts/live-string-write.js` and `test/scripts/live-string-nodered.js`.
+- Unit tests for TLS send ordering (`test/transport-tls-send.test.js`).
+- Unit tests for editor browse sessions (`test/browse-sessions.test.js`).
+- Admin endpoint `POST s7complus/browse/close` to release an editor browse session.
+- PLC test blocks `plc/s7-1500/DB_StringTest.db` (optimized) and `DB_StringTestStd.db` (standard access) with all String / WString lengths, arrays and a struct.
 
 ## [0.3.0] - 2026-07-17
 
@@ -70,7 +94,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Example flows in `examples/`: read multiple values, write single values and automated read/write verification.
 - PLC test data block sources in `plc/s7-1500/` and generator scripts in `scripts/`.
 
-[Unreleased]: https://github.com/DataLogXE/node-red-contrib-s7-plus/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/DataLogXE/node-red-contrib-s7-plus/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/DataLogXE/node-red-contrib-s7-plus/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/DataLogXE/node-red-contrib-s7-plus/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/DataLogXE/node-red-contrib-s7-plus/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/DataLogXE/node-red-contrib-s7-plus/compare/v0.1.0...v0.1.1

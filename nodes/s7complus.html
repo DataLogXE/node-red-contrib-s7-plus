@@ -188,14 +188,48 @@
             }, extra || {});
         }
 
+        // Relative URL: resolves against the editor page, so it also works
+        // when Node-RED runs with httpAdminRoot or behind a reverse proxy
+        // under a sub-path (the editor does not receive httpAdminRoot).
         function s7complusBrowseAjax(ctx, path, data) {
-            const root = (typeof RED !== 'undefined' && RED.settings && RED.settings.httpAdminRoot) || '/';
-            const base = root.endsWith('/') ? root : root + '/';
-            return $.ajax({
-                url: base + 's7complus/browse/' + path,
+            const url = 's7complus/browse/' + path;
+            const xhr = $.ajax({
+                url: url,
                 method: 'POST',
                 contentType: 'application/json',
                 data: JSON.stringify(s7complusBrowsePayload(ctx, data))
+            });
+            xhr.s7complusUrl = url;
+            return xhr;
+        }
+
+        // Error text for a failed browse request. The handler always answers
+        // with JSON { error }; anything else (404 page, proxy error, network
+        // failure) did not come from the handler and is described by status.
+        function s7complusAjaxError(jq, what) {
+            if (jq && jq.responseJSON && jq.responseJSON.error) return jq.responseJSON.error;
+            const status = jq ? jq.status : 0;
+            if (!status) {
+                return what + ': no response from Node-RED (' + ((jq && jq.statusText) || 'network error') + ')';
+            }
+            let msg = what + ': HTTP ' + status + (jq.statusText ? ' ' + jq.statusText : '');
+            if (status === 404) {
+                msg += ' (' + ((jq && jq.s7complusUrl) || 's7complus/browse') + ' not found; restart Node-RED after installing or updating the s7-plus nodes)';
+            } else if (status === 401 || status === 403) {
+                msg += ' (no permission to read flows)';
+            }
+            return msg;
+        }
+
+        // Releases the PLC connection of an editor browse session. Sessions
+        // of a deployed endpoint have no id and need nothing.
+        function s7complusReleaseBrowseSession(sessionId) {
+            if (!sessionId) return;
+            $.ajax({
+                url: 's7complus/browse/close',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ browseSessionId: sessionId })
             });
         }
 
@@ -290,7 +324,7 @@
                         RED.notify('Added: ' + row.name, 'success');
                     })
                     .fail(function (jq) {
-                        RED.notify('Resolve failed: ' + ((jq.responseJSON && jq.responseJSON.error) || jq.statusText), 'error');
+                        RED.notify(s7complusAjaxError(jq, 'Resolve failed'), 'error');
                     })
                     .always(function () {
                         setAddButtonDisabled(false);
@@ -371,7 +405,7 @@
                         .fail(function (jq) {
                             expanded = false;
                             chevron.html('<i class="fa fa-caret-right"></i>');
-                            RED.notify('Browse failed: ' + ((jq.responseJSON && jq.responseJSON.error) || jq.statusText), 'error');
+                            RED.notify(s7complusAjaxError(jq, 'Browse failed'), 'error');
                         });
                 }
 
@@ -398,7 +432,7 @@
                 .fail(function (jq) {
                     treeRoot.empty();
                     treeRoot.append($('<li/>', { class: 's7complus-browse-error' })
-                        .text((jq.responseJSON && jq.responseJSON.error) || 'Browse failed'));
+                        .text(s7complusAjaxError(jq, 'Browse failed')));
                 });
 
             shell.dialog({
@@ -428,6 +462,9 @@
                     s7complusSetupDialogScroll(shell, treeWrap);
                 },
                 close: function () {
+                    s7complusReleaseBrowseSession(browseSessionId);
+                    browseSessionId = null;
+                    ctx.browseSessionId = null;
                     shell.dialog('destroy').remove();
                 }
             });
@@ -707,7 +744,7 @@
                     applyDbFilter(dbFilterValue);
                 })
                 .fail(function (jq) {
-                    dbHint.text((jq.responseJSON && jq.responseJSON.error) || 'Failed to load DB list');
+                    dbHint.text(s7complusAjaxError(jq, 'Failed to load DB list'));
                     dbParentCb.prop('disabled', true);
                     applyInitialScope();
                 });
@@ -786,6 +823,8 @@
                     s7complusSetupDialogScroll(shell, body);
                 },
                 close: function () {
+                    s7complusReleaseBrowseSession(ctx.browseSessionId);
+                    ctx.browseSessionId = null;
                     shell.dialog('destroy').remove();
                 }
             });
@@ -1195,6 +1234,12 @@ return msg;</pre>
     shows its <code>name</code> and datatype. Symbols are re-resolved symbolically at runtime,
     so the correct datatype is determined automatically &mdash; you never set it by hand or
     via message properties.</p>
+    <p><b>String / WString:</b> the text must fit the declared length of the target
+    (<code>String[n]</code> / <code>WString[n]</code>), and a <code>String</code> accepts only
+    ISO-8859-1 characters (no <code>€</code>, Greek, etc.; use a <code>WString</code> for those).
+    A text that does not fit is not truncated or altered: that symbol gets
+    <code>status: "error"</code> with the reason, is not written, and the other symbols of the
+    same message are still written.</p>
     <p>While a write is still running, further incoming messages are skipped (node status
     <i>"skipped (busy)"</i>) to protect the connection from overload.</p>
 

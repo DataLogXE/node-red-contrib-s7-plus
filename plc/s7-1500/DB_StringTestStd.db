@@ -1,0 +1,30 @@
+﻿DATA_BLOCK "DB_StringTestStd"
+{ S7_Optimized_Access := 'FALSE' }
+VERSION : 0.1
+NON_RETAIN
+   STRUCT
+      S_Len1 : String[1];   // String: declared length 1
+      S_Len10 : String[10];   // String: declared length 10
+      S_Len80 : String[80];   // String: declared length 80
+      S_Len254 : String[254];   // String: explicit maximum length
+      S_Default : String;   // String: default length 254
+      W_Len1 : WString[1];   // WString: declared length 1
+      W_Len10 : WString[10];   // WString: declared length 10
+      W_Len254 : WString[254];   // WString: explicit default length
+      W_Default : WString;   // WString: default length 254
+      W_Len1000 : WString[1000];   // WString: declared length 1000
+      S_Arr : Array[0..3] of String[8];   // Array of String[8]
+      W_Arr : Array[0..3] of WString[8];   // Array of WString[8]
+      St : Struct   // Struct with strings
+         S5 : String[5];   // String[5] in struct
+         W5 : WString[5];   // WString[5] in struct
+         Num : Int;   // Int after the strings
+      END_STRUCT;
+      Guard : Int;   // Must stay 12345: detects writes beyond a string
+   END_STRUCT;
+
+
+BEGIN
+   Guard := 12345;
+
+END_DATA_BLOCK

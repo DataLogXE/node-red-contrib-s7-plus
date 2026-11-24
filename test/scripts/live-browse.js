@@ -131,14 +131,15 @@ async function main() {
             log(`browseResolve("${firstLeaf.label}") -> name=${resolved.name} address=${resolved.address} datatype=${resolved.datatype}`);
 
             const { ItemAddress } = require(path.join('..', '..', 'lib', 's7plus', 'client'));
-            const { decodeReadValue } = require(path.join('..', '..', 'lib', 's7plus', 'values', 'encode-decode'));
+            const { decodeReadValue } = require(path.join('..', '..', 'lib', 's7plus', 'pvalue-codec'));
             const adr = new ItemAddress(resolved.address);
             const { values, errors } = await client.readValues([adr]);
             const err = errors[0];
             if (err && err !== 0n) {
                 log(`  readValues -> error 0x${err.toString(16)}`);
             } else {
-                log(`  readValues -> ${JSON.stringify(decodeReadValue(values[0]))}`);
+                const decoded = decodeReadValue(values[0], resolved.datatype);
+                log(`  readValues -> ${typeof decoded === 'bigint' ? decoded.toString() + 'n' : JSON.stringify(decoded)}`);
             }
         } catch (e) {
             log(`  resolve/read FAILED: ${e.message}`);

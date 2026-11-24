@@ -1,10 +1,11 @@
 'use strict';
 
-const crypto = require('crypto');
 const { S7CommPlusClient } = require('../lib/s7plus/client');
+const { BrowseSessionStore } = require('../lib/s7plus/browse-sessions');
 const ItemAddress = require('../lib/s7plus/item-address');
-const { decodeReadValue, encodeWriteValue } = require('../lib/s7plus/pvalue-codec');
-const { buildReadPayload, buildWritePayload } = require('../lib/s7plus/read-result');
+const { decodeReadValue } = require('../lib/s7plus/pvalue-codec');
+const { buildReadPayload } = require('../lib/s7plus/read-result');
+const { writeTagsEncoded } = require('../lib/s7plus/write-tags');
 const {
     symbolRoot,
     exploreScopeForRoot,
@@ -18,7 +19,6 @@ const { buildConnectionStatePayload } = require('../lib/s7plus/session-info');
 const { pathsEqual } = require('./s7complus-subscribe');
 const log = scoped('endpoint');
 
-const BROWSE_SESSION_TTL_MS = 15 * 60 * 1000;
 const RECONNECT_MAX_MS = 30000;
 const WATCHDOG_MS = 10000;
 // If the user lock is held but the transport produced NO inbound bytes
@@ -29,7 +29,6 @@ const WATCHDOG_MS = 10000;
 // conservative reserve for PLCs that take noticeably long to start
 // answering big requests (e.g. manual browseFull via Explore node).
 const WATCHDOG_HANG_NO_RESPONSE_MS = 120000;
-const ephemeralBrowseSessions = new Map();
 
 // Safe upper bound for items in a single subscription. The breakpoint test
 // showed a single subscription stays stable up to 100 items across all tested
@@ -100,47 +99,8 @@ function browseCredentials(body) {
     };
 }
 
-function pruneEphemeralSessions() {
-    const now = Date.now();
-    for (const [id, sess] of ephemeralBrowseSessions) {
-        if (sess.expires < now || sess.dead) {
-            log('ephemeral prune', { sessionId: id, dead: !!sess.dead, expired: sess.expires < now });
-            try { sess.client.forceDisconnect('prune'); } catch { /* ignore */ }
-            ephemeralBrowseSessions.delete(id);
-        }
-    }
-}
-
-async function createEphemeralBrowseSession(creds) {
-    pruneEphemeralSessions();
-    log('ephemeral create', { address: creds.address, port: creds.port });
-    const client = new S7CommPlusClient();
-    await client.connect(creds.address, creds.password, creds.username, creds.timeoutMs, creds.port);
-    const sessionId = crypto.randomBytes(16).toString('hex');
-    const sess = {
-        client,
-        expires: Date.now() + BROWSE_SESSION_TTL_MS,
-        dead: false
-    };
-    client.on('disconnect', (info) => {
-        sess.dead = true;
-        log('ephemeral disconnect', { sessionId, reason: info && info.reason });
-    });
-    ephemeralBrowseSessions.set(sessionId, sess);
-    return sessionId;
-}
-
-function getEphemeralSession(sessionId) {
-    pruneEphemeralSessions();
-    const sess = ephemeralBrowseSessions.get(sessionId);
-    if (!sess) throw new Error('Browse session expired — open Browse PLC again');
-    if (sess.dead || !sess.client.connected) {
-        ephemeralBrowseSessions.delete(sessionId);
-        throw new Error('Browse session stale — open Browse PLC again');
-    }
-    sess.expires = Date.now() + BROWSE_SESSION_TTL_MS;
-    return sess.client;
-}
+const browseSessions = new BrowseSessionStore({ createClient: () => new S7CommPlusClient() });
+browseSessions.startSweep();
 
 function endpointNodeFromBody(RED, body) {
     const id = body.id || body.endpointId;
@@ -175,20 +135,16 @@ async function withBrowseClient(RED, body, fn) {
     if (sessionId) {
         log('browse via ephemeral session', { sessionId });
         try {
-            const client = getEphemeralSession(sessionId);
+            const client = browseSessions.get(sessionId);
             return await fn(client, sessionId);
         } catch (e) {
             if (!isStaleConnectionError(e) && !/session (expired|stale)/i.test(e.message || '')) throw e;
             log('ephemeral retry: reconnecting', { sessionId, reason: e.message });
-            const stale = ephemeralBrowseSessions.get(sessionId);
-            if (stale) {
-                try { stale.client.forceDisconnect('retry'); } catch { /* ignore */ }
-                ephemeralBrowseSessions.delete(sessionId);
-            }
+            browseSessions.close(sessionId, 'retry');
             const creds = browseCredentials(body);
             if (!creds.address) throw e;
-            const newSessionId = await createEphemeralBrowseSession(creds);
-            const client = getEphemeralSession(newSessionId);
+            const newSessionId = await browseSessions.open(creds);
+            const client = browseSessions.get(newSessionId);
             return fn(client, newSessionId);
         }
     }
@@ -205,9 +161,9 @@ async function withBrowseClient(RED, body, fn) {
             ? 'Endpoint not deployed yet — enter address and use Browse PLC (works before Deploy).'
             : 'PLC address is required');
     }
-    log('browse via fresh ephemeral session', { address: creds.address, port: creds.port });
-    const newSessionId = await createEphemeralBrowseSession(creds);
-    const client = getEphemeralSession(newSessionId);
+    log('browse via ephemeral session (open or reuse)', { address: creds.address, port: creds.port });
+    const newSessionId = await browseSessions.open(creds);
+    const client = browseSessions.get(newSessionId);
     return fn(client, newSessionId);
 }
 
@@ -219,6 +175,9 @@ module.exports = function (RED) {
         // Live DTL packed-struct interface timestamp captured from the PLC.
         // Required to write DTL; null until the first DTL read/resolve sees it.
         node._dtlInterfaceTs = null;
+        // Declared max length of String[n] / WString[n] write targets, keyed
+        // by access string. A write must carry exactly this length.
+        node._stringLenCache = new Map();
         node._state = 'offline';
         node._connectPromise = null;
         node._closing = false;
@@ -532,6 +491,8 @@ module.exports = function (RED) {
 
         function crcCacheInvalidateAll() {
             _crcCache.clear();
+            // Declared string lengths belong to the same PLC program state.
+            node._stringLenCache.clear();
         }
 
         node.browseFull = (options) => withReconnect(async () => {
@@ -1014,15 +975,18 @@ module.exports = function (RED) {
                 captureDtlTimestamp(dtlIdx.map(i => tags[i]), values);
             }
 
-            const opts = { dtlInterfaceTimestamp: node._dtlInterfaceTs };
-            const vals = tags.map(t => encodeWriteValue(t.value, t.datatype, opts));
-            const { errors } = await node.client.writeValues(addresses, vals);
-
             // Per-item PLC errors are no longer thrown: writeTags now mirrors
             // readTags and returns a per-tag result keyed by name with
             // { value, status, error }. Stale-address self-heal in
             // resolveAndWrite inspects these statuses instead of catching.
-            return buildWritePayload(tags, errors);
+            //
+            // String / WString targets are written with their declared
+            // length (String[n]), read from the PLC once per address; see
+            // writeTagsEncoded.
+            return writeTagsEncoded(node.client, tags, addresses, {
+                dtlInterfaceTimestamp: node._dtlInterfaceTs,
+                stringLenCache: node._stringLenCache
+            });
         }, 'writeTags');
 
         /**
@@ -1212,11 +1176,7 @@ module.exports = function (RED) {
                 if (!isStaleConnectionError(e1) && !/session (expired|stale)/i.test(e1.message || '')) throw e1;
                 log('http browse retry', { op: opName, reason: e1.message });
                 if (body.browseSessionId) {
-                    const stale = ephemeralBrowseSessions.get(body.browseSessionId);
-                    if (stale) {
-                        try { stale.client.forceDisconnect('http-retry'); } catch { /* ignore */ }
-                        ephemeralBrowseSessions.delete(body.browseSessionId);
-                    }
+                    browseSessions.close(body.browseSessionId, 'http-retry');
                     body.browseSessionId = null;
                 }
                 payload = await attempt();
@@ -1225,6 +1185,8 @@ module.exports = function (RED) {
             res.json(payload);
         } catch (e) {
             log('http browse fail', { op: opName, ms: Date.now() - t0, msg: e.message });
+            const target = body.address ? ` (${String(body.address).trim()})` : '';
+            RED.log.warn(`[s7-plus] Browse ${opName} failed${target}: ${e.message}`);
             res.status(500).json({ error: e.message });
         }
     }
@@ -1249,8 +1211,18 @@ module.exports = function (RED) {
         return handleBrowseRequest(req, res, 'resolve', (client) => client.browseResolve(body.nodeId));
     }
 
+    // Releases an editor browse session (and its PLC connection) when the
+    // dialog closes. Unknown or already expired ids are not an error.
+    function handleBrowseClose(req, res) {
+        const body = browseBody(req);
+        const closed = body.browseSessionId ? browseSessions.close(body.browseSessionId, 'dialog-close') : false;
+        log('http browse close', { sessionId: body.browseSessionId, closed });
+        res.json({ closed });
+    }
+
     const browsePerm = RED.auth.needsPermission('flows.read');
     RED.httpAdmin.post('/s7complus/browse/roots', browsePerm, handleBrowseRoots);
     RED.httpAdmin.post('/s7complus/browse/children', browsePerm, handleBrowseChildren);
     RED.httpAdmin.post('/s7complus/browse/resolve', browsePerm, handleBrowseResolve);
+    RED.httpAdmin.post('/s7complus/browse/close', browsePerm, handleBrowseClose);
 };
